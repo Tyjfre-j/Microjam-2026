@@ -1,4 +1,7 @@
 ﻿<Solution>
+<<<<<<< origin/Lama-Cube
+  <Project Path="Assembly-CSharp.csproj" />
+=======
   <Project Path="Unity.Timeline.csproj" />
   <Project Path="Unity.RenderPipelines.GPUDriven.Runtime.csproj" />
   <Project Path="Unity.PlasticSCM.Editor.csproj" />
@@ -69,4 +72,5 @@
   <Project Path="Unity.RenderPipelines.Universal.Config.Runtime.csproj" />
   <Project Path="Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.csproj" />
   <Project Path="Unity.RenderPipelines.Core.ShaderLibrary.csproj" />
+>>>>>>> main
 </Solution>

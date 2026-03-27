@@ -1,24 +1,18 @@
-using System.Collections;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class CubeScrambler : MonoBehaviour
 {
-    [SerializeField] private int scrambleMoves = 8;
+    [SerializeField] private int scrambleMoves = 10;
 
-    private PivotCubeController pivotController;
     private CubeState cubeState;
-    private (Vector3 axis, string name)[] moves;
+    private CubeRotations cubeRotations;
+    private List<System.Action> rotations;
 
     private void Awake()
     {
-        pivotController = GetComponent<PivotCubeController>();
         cubeState = GetComponent<CubeState>();
-
-        if (pivotController == null)
-        {
-            Debug.LogError("[CubeScrambler] Missing PivotCubeController on CubeManager.");
-            return;
-        }
+        cubeRotations = GetComponent<CubeRotations>();
 
         if (cubeState == null)
         {
@@ -26,42 +20,65 @@ public class CubeScrambler : MonoBehaviour
             return;
         }
 
-        Transform p = pivotController.pivot;
-        moves = new (Vector3, string)[]
+        if (cubeRotations == null)
         {
-            (p.right,   "front"),
-            (p.right,   "back"),
-            (p.up,      "top"),
-            (p.up,      "bottom"),
-            (p.forward, "right"),
-            (p.forward, "left"),
+            Debug.LogError("[CubeScrambler] Missing CubeRotations on CubeManager.");
+            return;
+        }
+
+        rotations = new List<System.Action>
+        {
+            cubeRotations.RotateU,
+            cubeRotations.RotateUPrime,
+            cubeRotations.RotateD,
+            cubeRotations.RotateDPrime,
+            cubeRotations.RotateR,
+            cubeRotations.RotateRPrime,
+            cubeRotations.RotateL,
+            cubeRotations.RotateLPrime,
+            cubeRotations.RotateF,
+            cubeRotations.RotateFPrime,
+            cubeRotations.RotateB,
+            cubeRotations.RotateBPrime,
         };
     }
 
-    private IEnumerator Start()
+    private void Start()
     {
-        if (pivotController == null || cubeState == null || moves == null || moves.Length == 0)
+        if (cubeRotations == null || cubeState == null || rotations == null || rotations.Count == 0)
         {
-            yield break;
+            return;
         }
 
         cubeState.InitSolvedState();
-        yield return StartCoroutine(ScrambleRoutine(scrambleMoves));
+        Scramble(scrambleMoves);
 
-        Debug.Log("Scramble complete");
+        Debug.Log($"Cube scrambled with {scrambleMoves} moves");
         cubeState.DebugPrintState();
     }
 
     /// <summary>Scramble the cube by performing a sequence of random moves.</summary>
-    public IEnumerator ScrambleRoutine(int numMoves)
+    public void Scramble(int numMoves)
     {
+        if (rotations == null || rotations.Count == 0)
+        {
+            return;
+        }
+
         for (int i = 0; i < numMoves; i++)
         {
-            int index = Random.Range(0, moves.Length);
-            (Vector3 axis, string name) move = moves[index];
+            int index = Random.Range(0, rotations.Count);
+            rotations[index]?.Invoke();
+        }
 
-            StartCoroutine(pivotController.RotateSequence(move.axis, move.name));
-            yield return new WaitUntil(() => !pivotController.IsRotating);
+        if (numMoves > 0 && cubeState.IsSolved())
+        {
+            // Rare edge case: re-scramble if we accidentally end up solved.
+            for (int i = 0; i < numMoves; i++)
+            {
+                int index = Random.Range(0, rotations.Count);
+                rotations[index]?.Invoke();
+            }
         }
     }
 }

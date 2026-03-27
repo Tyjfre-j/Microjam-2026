@@ -17,9 +17,13 @@ public class CubeState : MonoBehaviour
     private const int FaceCount = 6;
     private const int TilesPerFace = 4;
 
-    private void Start()
+    private void Awake()
     {
         InitSolvedState();
+    }
+
+    private void Start()
+    {
         DebugPrintState();
     }
 

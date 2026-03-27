@@ -61,7 +61,7 @@ public class CubeScrambler : MonoBehaviour
             (Vector3 axis, string name) move = moves[index];
 
             StartCoroutine(pivotController.RotateSequence(move.axis, move.name));
-            yield return new WaitUntil(() => !pivotController.isRotating);
+            yield return new WaitUntil(() => !pivotController.IsRotating);
         }
     }
 }

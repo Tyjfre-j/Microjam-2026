@@ -8,6 +8,7 @@ public class PivotCubeController : MonoBehaviour
     public string cubeTag = "Cube";
     public float rotationSpeed = 400f; 
     private bool isRotating = false;
+    public bool IsRotating => isRotating;
 
  // Change these at the top of your class:
 public List<GameObject> activeLayer = new List<GameObject>(); // Changed to public
@@ -30,7 +31,7 @@ public string currentLayerName; // Add this line
         if (Keyboard.current.lKey.wasPressedThisFrame) StartCoroutine(RotateSequence(pivot.forward, "left"));
     }
 
-    System.Collections.IEnumerator RotateSequence(Vector3 axis, string layerName)
+    public System.Collections.IEnumerator RotateSequence(Vector3 axis, string layerName)
     {
         currentLayerName = layerName; // <--- ADD THIS LINE
         isRotating = true;

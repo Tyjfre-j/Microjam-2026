@@ -1,11 +1,18 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class Player3DControl : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
-    [SerializeField] private float moveSpeed = 7f;
-    [SerializeField] private float jumpForce = 10f;
-    [SerializeField] private LayerMask walkableLayer;
+    [Header("Movement")]
+    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float jumpForce = 8f;
+
+    [Header("Ground Check")]
+    [SerializeField] private Transform groundCheck;
+    [SerializeField] private float groundCheckRadius = 0.15f;
+    [SerializeField] private LayerMask groundLayer;
+
+    [Header("Input")]
     [SerializeField] private InputActionReference moveAction;
     [SerializeField] private InputActionReference jumpAction;
 
@@ -17,6 +24,10 @@ public class Player3DControl : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionZ;
+        }
     }
 
     private void OnEnable()
@@ -47,7 +58,10 @@ public class Player3DControl : MonoBehaviour
 
     private void FixedUpdate()
     {
-        isGrounded = Physics.Raycast(transform.position, -transform.up, 1.2f, walkableLayer);
+        if (groundCheck != null)
+        {
+            isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayer);
+        }
 
         if (jumpRequested && isGrounded)
         {

@@ -7,12 +7,14 @@ public class CubeScrambler : MonoBehaviour
 
     private CubeState cubeState;
     private CubeRotations cubeRotations;
+    private CubeVisual cubeVisual;
     private List<System.Action> rotations;
 
     private void Awake()
     {
         cubeState = GetComponent<CubeState>();
         cubeRotations = GetComponent<CubeRotations>();
+        cubeVisual = GetComponent<CubeVisual>();
 
         if (cubeState == null)
         {
@@ -55,6 +57,11 @@ public class CubeScrambler : MonoBehaviour
 
         Debug.Log($"Cube scrambled with {scrambleMoves} moves");
         cubeState.DebugPrintState();
+
+        if (cubeVisual != null)
+        {
+            cubeVisual.ApplyStickersFromState();
+        }
     }
 
     /// <summary>Scramble the cube by performing a sequence of random moves.</summary>

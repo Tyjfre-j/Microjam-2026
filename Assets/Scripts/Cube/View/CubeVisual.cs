@@ -270,34 +270,34 @@ public class CubeVisual : MonoBehaviour
             if (xSign > 0)
             {
                 int idx = GetTileIndexForFace(3, xSign, ySign, zSign);
-                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.right, transform);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.right);
             }
             else
             {
                 int idx = GetTileIndexForFace(2, xSign, ySign, zSign);
-                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.right, transform);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.right);
             }
 
             if (ySign > 0)
             {
                 int idx = GetTileIndexForFace(4, xSign, ySign, zSign);
-                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.up, transform);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.up);
             }
             else
             {
                 int idx = GetTileIndexForFace(5, xSign, ySign, zSign);
-                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.up, transform);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.up);
             }
 
             if (zSign > 0)
             {
                 int idx = GetTileIndexForFace(0, xSign, ySign, zSign);
-                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.forward, transform);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.forward);
             }
             else
             {
                 int idx = GetTileIndexForFace(1, xSign, ySign, zSign);
-                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.forward, transform);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.forward);
             }
         }
     }

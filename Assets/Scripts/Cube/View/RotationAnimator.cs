@@ -12,6 +12,7 @@ public class RotationAnimator : MonoBehaviour
     [Header("Animation Settings")]
     [SerializeField] private float animationDuration = 0.3f;
     [SerializeField] private bool syncStateFromVisuals = true;
+    [SerializeField] private float layerEpsilon = 0.001f;
     public bool isAnimating { get; private set; }
 
     private CubeVisual cubeVisual;
@@ -39,6 +40,11 @@ public class RotationAnimator : MonoBehaviour
         if (isAnimating || cubeVisual == null || cubeRotations == null || cubeVisual.pieces == null)
         {
             return;
+        }
+
+        if (cubeVisual.pieces.Length != 8)
+        {
+            Debug.LogWarning("[RotationAnimator] Expected 8 pieces, but found a different count.");
         }
 
         if (!TryGetRotationData(type, out int[] pieceIndices, out Vector3 axis, out float angle, out System.Action applyRotation))
@@ -242,14 +248,19 @@ public class RotationAnimator : MonoBehaviour
             Vector3 local = cubeVisual.transform.InverseTransformPoint(t.position);
             float value = axis == AxisFilter.X ? local.x : axis == AxisFilter.Y ? local.y : local.z;
 
-            if (sign > 0 && value > 0f)
+            if (sign > 0 && value > layerEpsilon)
             {
                 indices.Add(i);
             }
-            else if (sign < 0 && value < 0f)
+            else if (sign < 0 && value < -layerEpsilon)
             {
                 indices.Add(i);
             }
+        }
+
+        if (indices.Count != 4)
+        {
+            Debug.LogWarning($"[RotationAnimator] Expected 4 pieces but found {indices.Count} for {axis} layer {sign}.");
         }
 
         return indices.ToArray();

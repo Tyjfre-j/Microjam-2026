@@ -38,7 +38,7 @@ public class CubePiece : MonoBehaviour
         return stickers.TryGetValue(face, out CubeState.TileColor color) ? color : CubeState.TileColor.Red;
     }
 
-    public CubeState.TileColor GetStickerFacingWorld(Vector3 worldDir, Transform cubeRoot)
+    public CubeState.TileColor GetStickerFacingWorld(Vector3 worldDir)
     {
         Face bestFace = Face.PosZ;
         float bestDot = -1f;

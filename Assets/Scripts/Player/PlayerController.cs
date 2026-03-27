@@ -20,6 +20,7 @@ public class PlayerController : MonoBehaviour
     private bool isGrounded;
     private float moveInput;
     private bool jumpRequested;
+    private bool isInputEnabled = true;
 
     private void Awake()
     {
@@ -44,6 +45,8 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (!isInputEnabled) { return; }
+
         if (moveAction != null)
         {
             Vector2 move = moveAction.action.ReadValue<Vector2>();
@@ -58,6 +61,8 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (!isInputEnabled) { return; }
+
         if (groundCheck != null)
         {
             isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayer);
@@ -72,5 +77,16 @@ public class PlayerController : MonoBehaviour
         Vector3 localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
         localVelocity.x = moveInput * moveSpeed;
         rb.linearVelocity = transform.TransformDirection(localVelocity);
+    }
+
+    /// <summary>Enable or disable player input.</summary>
+    public void SetInputEnabled(bool enabled)
+    {
+        isInputEnabled = enabled;
+        if (!isInputEnabled)
+        {
+            moveInput = 0f;
+            jumpRequested = false;
+        }
     }
 }

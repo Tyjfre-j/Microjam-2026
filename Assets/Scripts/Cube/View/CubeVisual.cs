@@ -15,7 +15,7 @@ public class CubeVisual : MonoBehaviour
 
     private CubeState cubeState;
     private GameObject cubePiecesRoot;
-    private GameObject[] pieces;
+    public GameObject[] pieces;
 
     private void Awake()
     {
@@ -76,12 +76,22 @@ public class CubeVisual : MonoBehaviour
             GameObject piece = Instantiate(cubePiecePrefab, cubePiecesRoot.transform);
             piece.transform.localPosition = positions[i];
             piece.transform.localRotation = Quaternion.identity;
+            if (piece.GetComponent<CubePiece>() == null)
+            {
+                piece.AddComponent<CubePiece>();
+            }
             pieces[i] = piece;
         }
     }
 
     /// <summary>Apply the cube face colors to each piece face.</summary>
     public void ApplyFaceColorsFromState()
+    {
+        ApplyStickersFromState();
+    }
+
+    /// <summary>Apply stickers to each cube piece based on CubeState.</summary>
+    public void ApplyStickersFromState()
     {
         if (cubeState == null || cubeState.tiles == null || cubeState.tiles.Length != 24)
         {
@@ -94,23 +104,57 @@ public class CubeVisual : MonoBehaviour
             return;
         }
 
-        Color front = ToColor(cubeState.tiles[0]);
-        Color back = ToColor(cubeState.tiles[4]);
-        Color left = ToColor(cubeState.tiles[8]);
-        Color right = ToColor(cubeState.tiles[12]);
-        Color top = ToColor(cubeState.tiles[16]);
-        Color bottom = ToColor(cubeState.tiles[20]);
-
         foreach (GameObject piece in pieces)
         {
             if (piece == null) { continue; }
+            CubePiece cubePiece = piece.GetComponent<CubePiece>();
+            if (cubePiece == null) { continue; }
 
-            ApplyColorToFace(piece, "Face_+Z", front);
-            ApplyColorToFace(piece, "Face_-Z", back);
-            ApplyColorToFace(piece, "Face_-X", left);
-            ApplyColorToFace(piece, "Face_+X", right);
-            ApplyColorToFace(piece, "Face_+Y", top);
-            ApplyColorToFace(piece, "Face_-Y", bottom);
+            Vector3 local = transform.InverseTransformPoint(piece.transform.position);
+            int xSign = Sign(local.x);
+            int ySign = Sign(local.y);
+            int zSign = Sign(local.z);
+
+            // Clear all stickers to black for interior faces.
+            cubePiece.SetFaceColor(CubePiece.Face.PosX, Color.black);
+            cubePiece.SetFaceColor(CubePiece.Face.NegX, Color.black);
+            cubePiece.SetFaceColor(CubePiece.Face.PosY, Color.black);
+            cubePiece.SetFaceColor(CubePiece.Face.NegY, Color.black);
+            cubePiece.SetFaceColor(CubePiece.Face.PosZ, Color.black);
+            cubePiece.SetFaceColor(CubePiece.Face.NegZ, Color.black);
+
+            if (xSign > 0)
+            {
+                int idx = GetTileIndexForFace(3, xSign, ySign, zSign);
+                cubePiece.SetSticker(CubePiece.Face.PosX, cubeState.tiles[idx]);
+            }
+            else
+            {
+                int idx = GetTileIndexForFace(2, xSign, ySign, zSign);
+                cubePiece.SetSticker(CubePiece.Face.NegX, cubeState.tiles[idx]);
+            }
+
+            if (ySign > 0)
+            {
+                int idx = GetTileIndexForFace(4, xSign, ySign, zSign);
+                cubePiece.SetSticker(CubePiece.Face.PosY, cubeState.tiles[idx]);
+            }
+            else
+            {
+                int idx = GetTileIndexForFace(5, xSign, ySign, zSign);
+                cubePiece.SetSticker(CubePiece.Face.NegY, cubeState.tiles[idx]);
+            }
+
+            if (zSign > 0)
+            {
+                int idx = GetTileIndexForFace(0, xSign, ySign, zSign);
+                cubePiece.SetSticker(CubePiece.Face.PosZ, cubeState.tiles[idx]);
+            }
+            else
+            {
+                int idx = GetTileIndexForFace(1, xSign, ySign, zSign);
+                cubePiece.SetSticker(CubePiece.Face.NegZ, cubeState.tiles[idx]);
+            }
         }
     }
 
@@ -133,7 +177,7 @@ public class CubeVisual : MonoBehaviour
         if (mat.HasProperty("_Color")) { mat.SetColor("_Color", color); }
     }
 
-    private static Color ToColor(CubeState.TileColor tile)
+    public static Color ToColor(CubeState.TileColor tile)
     {
         return tile switch
         {
@@ -145,5 +189,116 @@ public class CubeVisual : MonoBehaviour
             CubeState.TileColor.White => new Color(0.92f, 0.92f, 0.92f),
             _ => Color.magenta,
         };
+    }
+
+    private static int GetTileIndexForFace(int faceIndex, int xSign, int ySign, int zSign)
+    {
+        bool top;
+        bool right;
+
+        switch (faceIndex)
+        {
+            case 0: // Front (+Z)
+                top = ySign > 0;
+                right = xSign > 0;
+                break;
+            case 1: // Back (-Z)
+                top = ySign > 0;
+                right = xSign < 0;
+                break;
+            case 2: // Left (-X)
+                top = ySign > 0;
+                right = zSign > 0;
+                break;
+            case 3: // Right (+X)
+                top = ySign > 0;
+                right = zSign < 0;
+                break;
+            case 4: // Top (+Y)
+                top = zSign < 0;
+                right = xSign > 0;
+                break;
+            case 5: // Bottom (-Y)
+                top = zSign > 0;
+                right = xSign > 0;
+                break;
+            default:
+                top = true;
+                right = true;
+                break;
+        }
+
+        int tile = (top ? 0 : 2) + (right ? 1 : 0);
+        return (faceIndex * 4) + tile;
+    }
+
+    private static int Sign(float value)
+    {
+        return value >= 0f ? 1 : -1;
+    }
+
+    /// <summary>Read outward stickers from the pieces and update CubeState.</summary>
+    public void SyncStateFromPieces()
+    {
+        if (cubeState == null || cubeState.tiles == null || cubeState.tiles.Length != 24)
+        {
+            Debug.LogError("[CubeVisual] CubeState tiles are missing or invalid.");
+            return;
+        }
+
+        if (pieces == null || pieces.Length == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < cubeState.tiles.Length; i++)
+        {
+            cubeState.tiles[i] = CubeState.TileColor.Red;
+        }
+
+        foreach (GameObject piece in pieces)
+        {
+            if (piece == null) { continue; }
+            CubePiece cubePiece = piece.GetComponent<CubePiece>();
+            if (cubePiece == null) { continue; }
+
+            Vector3 local = transform.InverseTransformPoint(piece.transform.position);
+            int xSign = Sign(local.x);
+            int ySign = Sign(local.y);
+            int zSign = Sign(local.z);
+
+            if (xSign > 0)
+            {
+                int idx = GetTileIndexForFace(3, xSign, ySign, zSign);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.right, transform);
+            }
+            else
+            {
+                int idx = GetTileIndexForFace(2, xSign, ySign, zSign);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.right, transform);
+            }
+
+            if (ySign > 0)
+            {
+                int idx = GetTileIndexForFace(4, xSign, ySign, zSign);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.up, transform);
+            }
+            else
+            {
+                int idx = GetTileIndexForFace(5, xSign, ySign, zSign);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.up, transform);
+            }
+
+            if (zSign > 0)
+            {
+                int idx = GetTileIndexForFace(0, xSign, ySign, zSign);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(transform.forward, transform);
+            }
+            else
+            {
+                int idx = GetTileIndexForFace(1, xSign, ySign, zSign);
+                cubeState.tiles[idx] = cubePiece.GetStickerFacingWorld(-transform.forward, transform);
+            }
+        }
     }
 }

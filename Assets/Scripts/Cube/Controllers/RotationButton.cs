@@ -29,7 +29,7 @@ public class RotationButton : MonoBehaviour
     {
         if (rotationAnimator == null)
         {
-            rotationAnimator = FindObjectOfType<RotationAnimator>();
+            rotationAnimator = FindAnyObjectByType<RotationAnimator>();
         }
     }
 

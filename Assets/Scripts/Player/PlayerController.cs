@@ -16,7 +16,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private InputActionReference moveAction;
     [SerializeField] private InputActionReference jumpAction;
 
-    private Rigidbody rb;
+    private Rigidbody2D rb;
     private bool isGrounded;
     private float moveInput;
     private bool jumpRequested;
@@ -24,10 +24,10 @@ public class PlayerController : MonoBehaviour
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
+        rb = GetComponent<Rigidbody2D>();
         if (rb != null)
         {
-            rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionZ;
+            rb.freezeRotation = true;
         }
     }
 
@@ -65,18 +65,18 @@ public class PlayerController : MonoBehaviour
 
         if (groundCheck != null)
         {
-            isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayer);
+            isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
         }
 
         if (jumpRequested && isGrounded)
         {
-            rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
         }
         jumpRequested = false;
 
-        Vector3 localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
-        localVelocity.x = moveInput * moveSpeed;
-        rb.linearVelocity = transform.TransformDirection(localVelocity);
+        Vector2 velocity = rb.linearVelocity;
+        velocity.x = moveInput * moveSpeed;
+        rb.linearVelocity = velocity;
     }
 
     /// <summary>Enable or disable player input.</summary>

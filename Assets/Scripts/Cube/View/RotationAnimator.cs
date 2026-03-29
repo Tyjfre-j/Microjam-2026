@@ -17,6 +17,7 @@ public class RotationAnimator : MonoBehaviour
 
     private CubeVisual cubeVisual;
     private CubeRotations cubeRotations;
+    public event System.Action OnRotationComplete;
 
     private void Awake()
     {
@@ -108,6 +109,7 @@ public class RotationAnimator : MonoBehaviour
         {
             cubeVisual.SyncStateFromPieces();
         }
+        OnRotationComplete?.Invoke();
     }
 
     private IEnumerator AnimateRotationCoroutine(int[] pieceIndices, Vector3 axis, float angle, float duration)

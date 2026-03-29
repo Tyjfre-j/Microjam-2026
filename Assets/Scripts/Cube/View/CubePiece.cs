@@ -4,33 +4,44 @@ using UnityEngine;
 
 public class CubePiece : MonoBehaviour
 {
-    public enum Face
-    {
-        PosX,
-        NegX,
-        PosY,
-        NegY,
-        PosZ,
-        NegZ
-    }
+    public enum Face { PosX, NegX, PosY, NegY, PosZ, NegZ }
 
     private readonly Dictionary<Face, Renderer> faceRenderers = new Dictionary<Face, Renderer>();
+    private readonly Dictionary<Face, Animator> faceAnimators = new Dictionary<Face, Animator>(); // NEW
     private readonly Dictionary<Face, CubeState.TileColor> stickers = new Dictionary<Face, CubeState.TileColor>();
 
     private void Awake()
     {
-        CacheFaceRenderer(Face.PosX, "Face_+X");
-        CacheFaceRenderer(Face.NegX, "Face_-X");
-        CacheFaceRenderer(Face.PosY, "Face_+Y");
-        CacheFaceRenderer(Face.NegY, "Face_-Y");
-        CacheFaceRenderer(Face.PosZ, "Face_+Z");
-        CacheFaceRenderer(Face.NegZ, "Face_-Z");
+        CacheFaceComponents(Face.PosX, "Face_+X");
+        CacheFaceComponents(Face.NegX, "Face_-X");
+        CacheFaceComponents(Face.PosY, "Face_+Y");
+        CacheFaceComponents(Face.NegY, "Face_-Y");
+        CacheFaceComponents(Face.PosZ, "Face_+Z");
+        CacheFaceComponents(Face.NegZ, "Face_-Z");
     }
 
-    public void SetSticker(Face face, CubeState.TileColor color)
+    // Inside CubePiece.cs
+    public void SetSticker(Face face, CubeState.TileColor color, Sprite[] animationSheet, int quadrantID)
     {
-        stickers[face] = color;
-        ApplySticker(face);
+        // Find the child object for the face (e.g. Face_+Z)
+        Transform t = transform.Find("Face_" + face.ToString().Replace("Pos", "+").Replace("Neg", "-"));
+        if (t != null)
+        {
+            // Add or Get the animator
+            QuadrantAnimator qAnim = t.GetComponent<QuadrantAnimator>();
+            if (qAnim == null) qAnim = t.gameObject.AddComponent<QuadrantAnimator>();
+
+            // Hide the 3D Mesh so the Sprite shows
+            MeshRenderer mr = t.GetComponent<MeshRenderer>();
+            if (mr != null) mr.enabled = false;
+
+            // Add SpriteRenderer if missing
+            SpriteRenderer sr = t.GetComponent<SpriteRenderer>();
+            if (sr == null) sr = t.gameObject.AddComponent<SpriteRenderer>();
+            sr.material = new Material(Shader.Find("Sprites/Default")); // Or your custom unlit shader
+
+            qAnim.Setup(animationSheet, quadrantID);
+        }
     }
 
     public CubeState.TileColor GetSticker(Face face)
@@ -54,7 +65,6 @@ public class CubePiece : MonoBehaviour
                 bestFace = face;
             }
         }
-
         return GetSticker(bestFace);
     }
 
@@ -70,10 +80,7 @@ public class CubePiece : MonoBehaviour
 
     private void ApplySticker(Face face)
     {
-        if (!faceRenderers.TryGetValue(face, out Renderer renderer) || renderer == null)
-        {
-            return;
-        }
+        if (!faceRenderers.TryGetValue(face, out Renderer renderer) || renderer == null) return;
 
         Color color = CubeVisual.ToColor(GetSticker(face));
         Material mat = renderer.material;
@@ -81,21 +88,16 @@ public class CubePiece : MonoBehaviour
         if (mat.HasProperty("_Color")) { mat.SetColor("_Color", color); }
     }
 
-    private void CacheFaceRenderer(Face face, string name)
+    private void CacheFaceComponents(Face face, string name)
     {
         Transform t = transform.Find(name);
-        if (t == null)
-        {
-            return;
-        }
+        if (t == null) return;
 
-        Renderer renderer = t.GetComponent<Renderer>();
-        if (renderer == null)
-        {
-            return;
-        }
+        Renderer r = t.GetComponent<Renderer>();
+        if (r != null) faceRenderers[face] = r;
 
-        faceRenderers[face] = renderer;
+        Animator a = t.GetComponent<Animator>(); // NEW
+        if (a != null) faceAnimators[face] = a;
     }
 
     private static Vector3 FaceToLocalDir(Face face)

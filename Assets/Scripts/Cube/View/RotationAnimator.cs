@@ -20,6 +20,13 @@ public class RotationAnimator : MonoBehaviour
     [FormerlySerializedAs("layerEpsilon")]
     [SerializeField, Tooltip("Treat values within this range as 0 when selecting layers.")]
     private float layerSelectionEpsilon = 0.001f;
+    [Header("Post Rotation Alignment")]
+    [SerializeField, Tooltip("Snap face meshes to their original world rotation after animation.")]
+    private bool snapFacesAfterRotation = true;
+    [SerializeField, Tooltip("Align platform parents to face normals after animation.")]
+    private bool alignPlatformsAfterRotation = true;
+    [SerializeField, Tooltip("Log face/platform alignment data after rotation.")]
+    private bool debugAlignment = false;
     public bool isAnimating { get; private set; }
 
     private CubeVisual cubeVisual;
@@ -120,9 +127,18 @@ public class RotationAnimator : MonoBehaviour
         pivot.transform.position = center;
         pivot.transform.SetParent(cubeVisual.PiecesRoot, true);
 
+        List<Transform> faceMeshes = new List<Transform>(pieceIndices.Length * 2);
+        Dictionary<Transform, Vector3> faceUpLocal = new Dictionary<Transform, Vector3>(pieceIndices.Length * 2);
+        Dictionary<Transform, Transform> faceToPiece = new Dictionary<Transform, Transform>(pieceIndices.Length * 2);
+        List<Transform> platformParents = new List<Transform>(pieceIndices.Length * 2);
+        Dictionary<Transform, Vector3> platformForwardLocal = new Dictionary<Transform, Vector3>(pieceIndices.Length * 2);
+        Dictionary<Transform, Transform> platformToPiece = new Dictionary<Transform, Transform>(pieceIndices.Length * 2);
+
         foreach (int idx in pieceIndices)
         {
-            cubeVisual.pieces[idx].transform.SetParent(pivot.transform, true);
+            Transform piece = cubeVisual.pieces[idx].transform;
+            piece.SetParent(pivot.transform, true);
+            CollectTargets(piece, faceMeshes, faceUpLocal, faceToPiece, platformParents, platformForwardLocal, platformToPiece);
         }
 
         Quaternion startRot = pivot.transform.rotation;
@@ -141,6 +157,26 @@ public class RotationAnimator : MonoBehaviour
         foreach (int idx in pieceIndices)
         {
             cubeVisual.pieces[idx].transform.SetParent(cubeVisual.PiecesRoot, true);
+        }
+
+        if (snapFacesAfterRotation)
+        {
+            for (int i = 0; i < faceMeshes.Count; i++)
+            {
+                Transform face = faceMeshes[i];
+                if (face == null) continue;
+                AlignFaceMesh(face, faceUpLocal, faceToPiece);
+            }
+        }
+
+        if (alignPlatformsAfterRotation)
+        {
+            for (int i = 0; i < platformParents.Count; i++)
+            {
+                Transform platformParent = platformParents[i];
+                if (platformParent == null) continue;
+                FixPlatformAlignment(platformParent, platformForwardLocal, platformToPiece);
+            }
         }
 
         Destroy(pivot);
@@ -262,5 +298,183 @@ public class RotationAnimator : MonoBehaviour
         if (indices.Count != 4) { }
 
         return indices.ToArray();
+    }
+
+    private void CollectTargets(
+        Transform root,
+        List<Transform> faceMeshes,
+        Dictionary<Transform, Vector3> faceUpLocal,
+        Dictionary<Transform, Transform> faceToPiece,
+        List<Transform> platformParents,
+        Dictionary<Transform, Vector3> platformForwardLocal,
+        Dictionary<Transform, Transform> platformToPiece)
+    {
+        Transform[] all = root.GetComponentsInChildren<Transform>(true);
+        foreach (Transform t in all)
+        {
+            if (t == null) continue;
+            if (IsFaceMeshName(t.name))
+            {
+                if (!faceMeshes.Contains(t))
+                {
+                    faceMeshes.Add(t);
+                    faceUpLocal[t] = root.InverseTransformDirection(t.up);
+                    faceToPiece[t] = root;
+                }
+                continue;
+            }
+
+            if (IsPlatformParent(t))
+            {
+                if (!platformParents.Contains(t))
+                {
+                    platformParents.Add(t);
+                    platformForwardLocal[t] = root.InverseTransformDirection(t.forward);
+                    platformToPiece[t] = root;
+                }
+            }
+        }
+    }
+
+    private bool IsFaceMeshName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        string compact = name.Replace(" ", "").ToUpperInvariant();
+        if (compact == "FACEMESH") return true;
+        if (compact == "FRONT") return true;
+        if (compact == "BACK") return true;
+        if (compact == "UP") return true;
+        if (compact == "DOWN") return true;
+        if (compact == "LEFT") return true;
+        if (compact == "RIGHT") return true;
+        return false;
+    }
+
+    private bool IsPlatformParent(Transform t)
+    {
+        if (t == null) return false;
+        string name = t.name.ToUpperInvariant();
+        return name.Contains("PL") && name.Contains("PARENT");
+    }
+
+    private void FixPlatformAlignment(
+        Transform plParent,
+        Dictionary<Transform, Vector3> platformForwardLocal,
+        Dictionary<Transform, Transform> platformToPiece)
+    {
+        if (plParent == null) return;
+        if (!platformToPiece.TryGetValue(plParent, out Transform piece) || piece == null) return;
+
+        Vector3 faceNormal = GetFaceNormal(plParent, piece);
+
+        Vector3 referenceForward = platformForwardLocal.TryGetValue(plParent, out Vector3 storedForwardLocal)
+            ? piece.TransformDirection(storedForwardLocal)
+            : plParent.forward;
+
+        Vector3 forward = Vector3.ProjectOnPlane(referenceForward, faceNormal);
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            Vector3 faceTangent = GetFaceTangent(plParent, piece);
+            forward = Vector3.ProjectOnPlane(faceTangent, faceNormal);
+        }
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            forward = Vector3.ProjectOnPlane(piece.up, faceNormal);
+        }
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            forward = Vector3.ProjectOnPlane(Vector3.forward, faceNormal);
+        }
+
+        plParent.rotation = Quaternion.LookRotation(forward.normalized, faceNormal);
+
+        foreach (Transform child in plParent)
+        {
+            child.localRotation = Quaternion.identity;
+        }
+
+        if (debugAlignment)
+        {
+            Debug.Log($"[RotationAnimator] Platform '{plParent.name}' normal={faceNormal} forward={forward.normalized}");
+        }
+    }
+
+    private void AlignFaceMesh(
+        Transform face,
+        Dictionary<Transform, Vector3> faceUpLocal,
+        Dictionary<Transform, Transform> faceToPiece)
+    {
+        if (face == null || cubeVisual == null) return;
+        if (!faceToPiece.TryGetValue(face, out Transform piece) || piece == null) return;
+
+        Vector3 faceNormal = GetFaceNormal(face, piece);
+
+        Vector3 preferredUp = faceUpLocal.TryGetValue(face, out Vector3 storedUpLocal)
+            ? piece.TransformDirection(storedUpLocal)
+            : face.up;
+        Vector3 up = Vector3.ProjectOnPlane(preferredUp, faceNormal);
+        if (up.sqrMagnitude < 0.0001f)
+        {
+            up = Vector3.ProjectOnPlane(piece.right, faceNormal);
+        }
+        if (up.sqrMagnitude < 0.0001f)
+        {
+            up = Vector3.up;
+        }
+
+        face.rotation = Quaternion.LookRotation(faceNormal, up.normalized);
+
+        if (debugAlignment)
+        {
+            Debug.Log($"[RotationAnimator] Face '{face.name}' normal={faceNormal} up={up.normalized}");
+        }
+    }
+
+    private Vector3 GetFaceNormal(Transform target, Transform piece)
+    {
+        Vector3 localNormal = GetFaceLocalNormalFromPivotHierarchy(target);
+        return SnapToAxis(piece.TransformDirection(localNormal));
+    }
+
+    private Vector3 GetFaceTangent(Transform target, Transform piece)
+    {
+        Transform current = target;
+        while (current != null)
+        {
+            string name = current.name.ToUpperInvariant();
+            if (name.Contains("FRONT") || name.Contains("BACK")) return piece.TransformDirection(Vector3.right);
+            if (name.Contains("LEFT") || name.Contains("RIGHT")) return piece.TransformDirection(Vector3.forward);
+            if (name.Contains("UP") || name.Contains("DOWN")) return piece.TransformDirection(Vector3.forward);
+            current = current.parent;
+        }
+        return piece.TransformDirection(Vector3.forward);
+    }
+
+    private Vector3 GetFaceLocalNormalFromPivotHierarchy(Transform t)
+    {
+        Transform current = t;
+        while (current != null)
+        {
+            string name = current.name.ToUpperInvariant();
+            if (name.StartsWith("PIVOT-")) name = name.Substring(6);
+            if (name == "FRONT") return Vector3.forward;
+            if (name == "BACK") return Vector3.back;
+            if (name == "UP") return Vector3.up;
+            if (name == "DOWN") return Vector3.down;
+            if (name == "LEFT") return Vector3.left;
+            if (name == "RIGHT") return Vector3.right;
+            current = current.parent;
+        }
+        return Vector3.forward;
+    }
+
+    private Vector3 SnapToAxis(Vector3 direction)
+    {
+        Vector3 d = direction.normalized;
+        if (Mathf.Abs(d.x) > Mathf.Abs(d.y) && Mathf.Abs(d.x) > Mathf.Abs(d.z))
+            return new Vector3(Mathf.Sign(d.x), 0f, 0f);
+        if (Mathf.Abs(d.y) > Mathf.Abs(d.x) && Mathf.Abs(d.y) > Mathf.Abs(d.z))
+            return new Vector3(0f, Mathf.Sign(d.y), 0f);
+        return new Vector3(0f, 0f, Mathf.Sign(d.z));
     }
 }

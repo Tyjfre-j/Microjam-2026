@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class RotationAnimator : MonoBehaviour
 {
@@ -10,9 +11,15 @@ public class RotationAnimator : MonoBehaviour
     }
 
     [Header("Animation Settings")]
-    [SerializeField] private float animationDuration = 0.3f;
-    [SerializeField] private bool syncStateFromVisuals = true;
-    [SerializeField] private float layerEpsilon = 0.001f;
+    [FormerlySerializedAs("animationDuration")]
+    [SerializeField, Tooltip("Seconds for a single 90° rotation animation.")]
+    private float rotationDuration = 0.3f;
+    [FormerlySerializedAs("syncStateFromVisuals")]
+    [SerializeField, Tooltip("After animation, sync CubeState from the rotated pieces.")]
+    private bool syncCubeStateFromPieces = true;
+    [FormerlySerializedAs("layerEpsilon")]
+    [SerializeField, Tooltip("Treat values within this range as 0 when selecting layers.")]
+    private float layerSelectionEpsilon = 0.001f;
     public bool isAnimating { get; private set; }
 
     private CubeVisual cubeVisual;
@@ -23,16 +30,7 @@ public class RotationAnimator : MonoBehaviour
     {
         cubeVisual = GetComponent<CubeVisual>();
         cubeRotations = GetComponent<CubeRotations>();
-
-        if (cubeVisual == null)
-        {
-            Debug.LogError("[RotationAnimator] Missing CubeVisual on CubeManager.");
-        }
-
-        if (cubeRotations == null)
-        {
-            Debug.LogError("[RotationAnimator] Missing CubeRotations on CubeManager.");
-        }
+        // Error logs removed per project request.
     }
 
     /// <summary>Animate a move and then apply the logical rotation.</summary>
@@ -43,18 +41,14 @@ public class RotationAnimator : MonoBehaviour
             return;
         }
 
-        if (cubeVisual.pieces.Length != 8)
-        {
-            Debug.LogWarning("[RotationAnimator] Expected 8 pieces, but found a different count.");
-        }
+        if (cubeVisual.pieces.Length != 8) { }
 
         if (!TryGetRotationData(type, out int[] pieceIndices, out Vector3 axis, out float angle, out System.Action applyRotation))
         {
-            Debug.LogError($"[RotationAnimator] RotationType {type} not implemented.");
             return;
         }
 
-        StartCoroutine(AnimateAndApplyCoroutine(pieceIndices, axis, angle, animationDuration, applyRotation));
+        StartCoroutine(AnimateAndApplyCoroutine(pieceIndices, axis, angle, rotationDuration, applyRotation));
     }
 
     [ContextMenu("Test/Rotate U")]
@@ -105,7 +99,7 @@ public class RotationAnimator : MonoBehaviour
         yield return AnimateRotationCoroutine(pieceIndices, axis, angle, duration);
 
         applyRotation?.Invoke();
-        if (syncStateFromVisuals)
+        if (syncCubeStateFromPieces)
         {
             cubeVisual.SyncStateFromPieces();
         }
@@ -124,7 +118,7 @@ public class RotationAnimator : MonoBehaviour
         }
         center /= pieceIndices.Length;
         pivot.transform.position = center;
-        pivot.transform.SetParent(cubeVisual.transform, true);
+        pivot.transform.SetParent(cubeVisual.PiecesRoot, true);
 
         foreach (int idx in pieceIndices)
         {
@@ -146,12 +140,13 @@ public class RotationAnimator : MonoBehaviour
 
         foreach (int idx in pieceIndices)
         {
-            cubeVisual.pieces[idx].transform.SetParent(cubeVisual.transform, true);
+            cubeVisual.pieces[idx].transform.SetParent(cubeVisual.PiecesRoot, true);
         }
 
         Destroy(pivot);
         isAnimating = false;
     }
+
 
     private bool TryGetRotationData(RotationType type, out int[] pieceIndices, out Vector3 axis, out float angle, out System.Action applyRotation)
     {
@@ -243,27 +238,28 @@ public class RotationAnimator : MonoBehaviour
 
     private int[] GetPiecesByAxisSign(AxisFilter axis, int sign)
     {
-        List<int> indices = new List<int>(4);
+        List<(int index, float value)> values = new List<(int, float)>(cubeVisual.pieces.Length);
         for (int i = 0; i < cubeVisual.pieces.Length; i++)
         {
             Transform t = cubeVisual.pieces[i].transform;
-            Vector3 local = cubeVisual.transform.InverseTransformPoint(t.position);
-            float value = axis == AxisFilter.X ? local.x : axis == AxisFilter.Y ? local.y : local.z;
-
-            if (sign > 0 && value > layerEpsilon)
-            {
-                indices.Add(i);
-            }
-            else if (sign < 0 && value < -layerEpsilon)
-            {
-                indices.Add(i);
-            }
+            Vector3 local = cubeVisual.PiecesRoot.InverseTransformPoint(t.position);
+            float v = axis == AxisFilter.X ? local.x : axis == AxisFilter.Y ? local.y : local.z;
+            if (Mathf.Abs(v) < layerSelectionEpsilon) { v = 0f; }
+            values.Add((i, v));
         }
 
-        if (indices.Count != 4)
+        values.Sort((a, b) => a.value.CompareTo(b.value));
+
+        int takeCount = Mathf.Min(4, values.Count);
+        int startIndex = sign > 0 ? Mathf.Max(0, values.Count - takeCount) : 0;
+
+        List<int> indices = new List<int>(takeCount);
+        for (int i = 0; i < takeCount; i++)
         {
-            Debug.LogWarning($"[RotationAnimator] Expected 4 pieces but found {indices.Count} for {axis} layer {sign}.");
+            indices.Add(values[startIndex + i].index);
         }
+
+        if (indices.Count != 4) { }
 
         return indices.ToArray();
     }

@@ -55,10 +55,7 @@ public class CubeRotations : MonoBehaviour
     private void Awake()
     {
         cubeState = GetComponent<CubeState>();
-        if (cubeState == null)
-        {
-            Debug.LogError("[CubeRotations] Missing CubeState on CubeManager.");
-        }
+        // Error log removed per project request.
     }
 
     /// <summary>Rotate the top layer clockwise (U).</summary>
@@ -233,7 +230,6 @@ public class CubeRotations : MonoBehaviour
     {
         if (cubeState == null || cubeState.tiles == null || cubeState.tiles.Length != 24)
         {
-            Debug.LogError("[CubeRotations] CubeState tiles array is missing or invalid.");
             return;
         }
 

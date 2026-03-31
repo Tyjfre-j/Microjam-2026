@@ -47,7 +47,7 @@ public class MainMenu : MonoBehaviour
     {
         if (showDebugLogs)
         {
-            Debug.Log($"[{GetType().Name}] {msg}");
+            // Log removed per project request.
         }
     }
 }

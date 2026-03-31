@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class CubeVisual : MonoBehaviour
 {
-    [Header("Prefab")]
-    [SerializeField] private GameObject cubePiecePrefab;
+    [Header("Prefab (Optional)")]
+    [FormerlySerializedAs("cubePiecePrefab")]
+    [SerializeField, Tooltip("Optional: used only if you call BuildPieces() to spawn cubelets.")]
+    private GameObject cubePiecePrefab;
 
     [Header("Surreal Dimensions (Animators)")]
     public RuntimeAnimatorController meatAnim;   // Red
@@ -18,15 +21,26 @@ public class CubeVisual : MonoBehaviour
     public Sprite[] spaceSheet;  // Drag the sliced space PNG here
     public Sprite[] ruinsSheet;  // Drag the sliced ruins PNG here
     [Header("Layout")]
-    [SerializeField] private float pieceOffset = 0.5f;
+    [FormerlySerializedAs("pieceOffset")]
+    [SerializeField, Tooltip("Half-size offset for spawning pieces when BuildPieces() is used.")]
+    private float pieceOffset = 0.5f;
+
+    [Header("Existing Pieces (Required)")]
+    [FormerlySerializedAs("existingPiecesRoot")]
+    [SerializeField, Tooltip("Root that contains the 8 cube pieces (e.g., CubeHolder/Cube).")]
+    private Transform cubePiecesRootTransform;
+    [FormerlySerializedAs("reparentExistingToCubeVisual")]
+    [SerializeField, Tooltip("Reparent pieces under this GameObject at runtime (Play Mode only). Recommended OFF for prebuilt cube prefabs.")]
+    private bool reparentPiecesToThis = false;
 
     [Header("Debug")]
-    [SerializeField] private bool rebuildOnStart = true;
-    [SerializeField] private bool logMissingFaces = false;
 
     private CubeState cubeState;
     private GameObject cubePiecesRoot;
     public GameObject[] pieces;
+
+    /// <summary>Transform space used to evaluate piece positions.</summary>
+    public Transform PiecesRoot => cubePiecesRootTransform != null ? cubePiecesRootTransform : transform;
 
     private void Awake()
     {
@@ -35,8 +49,53 @@ public class CubeVisual : MonoBehaviour
 
     private void Start()
     {
-        if (rebuildOnStart) BuildPieces();
+        CacheExistingPieces();
         ApplyStickersFromState();
+    }
+
+    private void CacheExistingPieces()
+    {
+        if (cubePiecesRootTransform == null)
+        {
+            pieces = new GameObject[0];
+            return;
+        }
+
+        cubePiecesRoot = cubePiecesRootTransform.gameObject;
+
+        List<Transform> children = new List<Transform>();
+        foreach (Transform child in cubePiecesRootTransform)
+        {
+            children.Add(child);
+        }
+
+        List<GameObject> found = new List<GameObject>(children.Count);
+        bool canReparent = reparentPiecesToThis && Application.isPlaying;
+        if (canReparent && cubePiecesRootTransform != transform)
+        {
+            canReparent = false;
+        }
+        if (reparentPiecesToThis && !Application.isPlaying) { }
+
+        foreach (Transform child in children)
+        {
+            if (canReparent)
+            {
+                child.SetParent(transform, true);
+            }
+            if (child.GetComponent<CubePiece>() == null) { child.gameObject.AddComponent<CubePiece>(); }
+            found.Add(child.gameObject);
+        }
+
+        pieces = found.ToArray();
+
+        if (pieces.Length != 8) { }
+    }
+
+    /// <summary>Refresh the pieces array from the assigned Existing Pieces Root.</summary>
+    public void RefreshExistingPieces()
+    {
+        CacheExistingPieces();
     }
 
     public void BuildPieces()
@@ -80,7 +139,7 @@ public class CubeVisual : MonoBehaviour
         foreach (GameObject piece in pieces)
         {
             CubePiece cubePiece = piece.GetComponent<CubePiece>();
-            Vector3 local = transform.InverseTransformPoint(piece.transform.position);
+            Vector3 local = PiecesRoot.InverseTransformPoint(piece.transform.position);
             int xSign = Sign(local.x); int ySign = Sign(local.y); int zSign = Sign(local.z);
 
             // Interior faces to black
@@ -162,17 +221,17 @@ public class CubeVisual : MonoBehaviour
         foreach (GameObject piece in pieces)
         {
             CubePiece cubePiece = piece.GetComponent<CubePiece>();
-            Vector3 local = transform.InverseTransformPoint(piece.transform.position);
+            Vector3 local = PiecesRoot.InverseTransformPoint(piece.transform.position);
             int xSign = Sign(local.x); int ySign = Sign(local.y); int zSign = Sign(local.z);
 
-            if (xSign > 0) cubeState.tiles[GetTileIndexForFace(3, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(transform.right);
-            else cubeState.tiles[GetTileIndexForFace(2, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-transform.right);
+            if (xSign > 0) cubeState.tiles[GetTileIndexForFace(3, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(PiecesRoot.right);
+            else cubeState.tiles[GetTileIndexForFace(2, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-PiecesRoot.right);
 
-            if (ySign > 0) cubeState.tiles[GetTileIndexForFace(4, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(transform.up);
-            else cubeState.tiles[GetTileIndexForFace(5, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-transform.up);
+            if (ySign > 0) cubeState.tiles[GetTileIndexForFace(4, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(PiecesRoot.up);
+            else cubeState.tiles[GetTileIndexForFace(5, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-PiecesRoot.up);
 
-            if (zSign > 0) cubeState.tiles[GetTileIndexForFace(0, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(transform.forward);
-            else cubeState.tiles[GetTileIndexForFace(1, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-transform.forward);
+            if (zSign > 0) cubeState.tiles[GetTileIndexForFace(0, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(PiecesRoot.forward);
+            else cubeState.tiles[GetTileIndexForFace(1, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-PiecesRoot.forward);
         }
     }
 }

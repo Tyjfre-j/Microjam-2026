@@ -16,17 +16,8 @@ public class CubeScrambler : MonoBehaviour
         cubeRotations = GetComponent<CubeRotations>();
         cubeVisual = GetComponent<CubeVisual>();
 
-        if (cubeState == null)
-        {
-            Debug.LogError("[CubeScrambler] Missing CubeState on CubeManager.");
-            return;
-        }
-
-        if (cubeRotations == null)
-        {
-            Debug.LogError("[CubeScrambler] Missing CubeRotations on CubeManager.");
-            return;
-        }
+        if (cubeState == null) { return; }
+        if (cubeRotations == null) { return; }
 
         rotations = new List<System.Action>
         {
@@ -55,7 +46,6 @@ public class CubeScrambler : MonoBehaviour
         cubeState.InitSolvedState();
         Scramble(scrambleMoves);
 
-        Debug.Log($"Cube scrambled with {scrambleMoves} moves");
         cubeState.DebugPrintState();
 
         if (cubeVisual != null)

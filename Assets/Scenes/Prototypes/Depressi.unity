@@ -333,7 +333,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30ea9ebd449530145873a7f5c5ed89c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CubeVisual
-  cubePiecePrefab: {fileID: 8641469391492238077, guid: b111056354275e9418d5afdf4a3ed3ce, type: 3}
+  cubePiecePrefab: {fileID: 1210131912214326394, guid: 363a93a9d1ff4a348bfffc4e3bc4755c, type: 3}
+  meatAnim: {fileID: 0}
+  spaceAnim: {fileID: 0}
+  ruinsAnim: {fileID: 0}
+  dreamAnim: {fileID: 0}
+  clinicAnim: {fileID: 0}
+  forestAnim: {fileID: 0}
+  meatSheet: []
+  spaceSheet: []
+  ruinsSheet: []
   pieceOffset: 0.5
   rebuildOnStart: 1
   logMissingFaces: 1

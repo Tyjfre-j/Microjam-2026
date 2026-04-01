@@ -5,6 +5,12 @@ using UnityEngine.UI;
 public class RotationAnimatorInput : MonoBehaviour
 {
     [SerializeField] private RotationAnimator rotationAnimator;
+    // --- ADDED ---
+    [SerializeField] private FaceChildrenRemover faceChildrenRemover;
+    // --- ADDED ---
+    [Header("Input Lock")]
+    [SerializeField] private bool disableInputDuringRotation = true;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugOverlay = true;
     [SerializeField] private bool showDebugLogs = false;
@@ -12,12 +18,18 @@ public class RotationAnimatorInput : MonoBehaviour
     private Text debugText;
     private float lastKeyTime;
     private string lastKeyLabel = "";
+    // --- ADDED ---
+    private bool isInputEnabled = true;
 
     private void Awake()
     {
         if (rotationAnimator == null)
         {
             rotationAnimator = GetComponent<RotationAnimator>();
+        }
+        if (faceChildrenRemover == null)
+        {
+            faceChildrenRemover = GetComponent<FaceChildrenRemover>();
         }
 
         if (showDebugOverlay)
@@ -26,8 +38,35 @@ public class RotationAnimatorInput : MonoBehaviour
         }
     }
 
+    // --- ADDED ---
+    private void OnEnable()
+    {
+        if (rotationAnimator != null && disableInputDuringRotation)
+        {
+            rotationAnimator.OnRotationStart += HandleRotationStart;
+        }
+        if (faceChildrenRemover != null && disableInputDuringRotation)
+        {
+            faceChildrenRemover.OnPlatformsRespawned += HandlePlatformsRespawned;
+        }
+    }
+
+    // --- ADDED ---
+    private void OnDisable()
+    {
+        if (rotationAnimator != null && disableInputDuringRotation)
+        {
+            rotationAnimator.OnRotationStart -= HandleRotationStart;
+        }
+        if (faceChildrenRemover != null && disableInputDuringRotation)
+        {
+            faceChildrenRemover.OnPlatformsRespawned -= HandlePlatformsRespawned;
+        }
+    }
+
     private void Update()
     {
+        if (!isInputEnabled) { return; }
         if (rotationAnimator == null || rotationAnimator.isAnimating) { return; }
 
         if (Keyboard.current == null) { return; }
@@ -95,5 +134,18 @@ public class RotationAnimatorInput : MonoBehaviour
         rt.pivot = new Vector2(0f, 1f);
         rt.anchoredPosition = new Vector2(10f, -10f);
         rt.sizeDelta = new Vector2(320f, 80f);
+    }
+
+    // --- ADDED ---
+    private void HandleRotationStart()
+    {
+        isInputEnabled = false;
+    }
+
+    // --- ADDED ---
+    // --- CHANGED ---
+    private void HandlePlatformsRespawned()
+    {
+        isInputEnabled = true;
     }
 }

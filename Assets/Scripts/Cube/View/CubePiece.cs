@@ -6,18 +6,36 @@ public class CubePiece : MonoBehaviour
 {
     public enum Face { PosX, NegX, PosY, NegY, PosZ, NegZ }
 
+    [Header("Grid Data")]
+    [SerializeField] private Vector3Int gridPosition;
+
+    private Transform cachedTransform;
+
     private readonly Dictionary<Face, Renderer> faceRenderers = new Dictionary<Face, Renderer>();
     private readonly Dictionary<Face, Animator> faceAnimators = new Dictionary<Face, Animator>(); // NEW
     private readonly Dictionary<Face, CubeState.TileColor> stickers = new Dictionary<Face, CubeState.TileColor>();
 
     private void Awake()
     {
+        cachedTransform = transform;
         CacheFaceComponents(Face.PosX, "Face_+X");
         CacheFaceComponents(Face.NegX, "Face_-X");
         CacheFaceComponents(Face.PosY, "Face_+Y");
         CacheFaceComponents(Face.NegY, "Face_-Y");
         CacheFaceComponents(Face.PosZ, "Face_+Z");
         CacheFaceComponents(Face.NegZ, "Face_-Z");
+    }
+
+    /// <summary>Cached Transform for this cube piece.</summary>
+    public Transform CachedTransform => cachedTransform != null ? cachedTransform : transform;
+
+    /// <summary>Current grid position of this cube piece.</summary>
+    public Vector3Int GridPosition => gridPosition;
+
+    /// <summary>Set the current grid position for this cube piece.</summary>
+    public void SetGridPosition(Vector3Int position)
+    {
+        gridPosition = position;
     }
 
     // Inside CubePiece.cs

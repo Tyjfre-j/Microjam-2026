@@ -22,7 +22,10 @@ public class CubeState : MonoBehaviour
         InitSolvedState();
     }
 
-    private void Start() { }
+    private void Start()
+    {
+        DebugPrintState();
+    }
 
     /// <summary>Initialize the cube to a solved state.</summary>
     public void InitSolvedState()
@@ -72,7 +75,11 @@ public class CubeState : MonoBehaviour
     /// <summary>Log the cube's tiles to the console, face by face.</summary>
     public void DebugPrintState()
     {
-        if (tiles == null || tiles.Length != FaceCount * TilesPerFace) { return; }
+        if (tiles == null || tiles.Length != FaceCount * TilesPerFace)
+        {
+            Debug.LogWarning("[CubeState] Tiles array is missing or has an invalid size.");
+            return;
+        }
 
         for (int face = 0; face < FaceCount; face++)
         {
@@ -89,7 +96,7 @@ public class CubeState : MonoBehaviour
                 tiles[startIndex + 3]
             );
 
-            // Log removed per project request.
+            Debug.Log(line);
         }
     }
 }

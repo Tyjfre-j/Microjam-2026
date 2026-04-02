@@ -106,7 +106,7 @@ public class CameraController : MonoBehaviour
     {
         if (showDebugLogs)
         {
-            // Log removed per project request.
+            Debug.Log($"[{GetType().Name}] {msg}");
         }
     }
 }

@@ -1,8 +1,12 @@
 fileFormatVersion: 2
+<<<<<<< origin/Lama-Cube
 guid: 3954bbf3d338e0b40944436b50e228fa
+=======
+guid: 2116c0027f77d0d47a86533bc665675c
+>>>>>>> main
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

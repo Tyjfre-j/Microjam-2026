@@ -1,237 +1,130 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class CubeVisual : MonoBehaviour
 {
-    [Header("Prefab (Optional)")]
-    [FormerlySerializedAs("cubePiecePrefab")]
-    [SerializeField, Tooltip("Optional: used only if you call BuildPieces() to spawn cubelets.")]
-    private GameObject cubePiecePrefab;
+    [Header("Prefab (Only if Rebuild is ON)")]
+    [SerializeField] private GameObject cubePiecePrefab;
 
-    [Header("Surreal Dimensions (Animators)")]
-    public RuntimeAnimatorController meatAnim;   // Red
-    public RuntimeAnimatorController spaceAnim;  // Blue
-    public RuntimeAnimatorController ruinsAnim;  // Orange
-    public RuntimeAnimatorController dreamAnim;  // Yellow
-    public RuntimeAnimatorController clinicAnim; // White
-    public RuntimeAnimatorController forestAnim; // Green
-    [Header("Surreal Animated Sheets")]
-    public Sprite[] meatSheet;   // Drag the sliced meat PNG here
-    public Sprite[] spaceSheet;  // Drag the sliced space PNG here
-    public Sprite[] ruinsSheet;  // Drag the sliced ruins PNG here
+    [Header("Manual Setup")]
+    [Tooltip("UNCHECK THIS if you placed cubes manually in the scene")]
+    public bool rebuildOnStart = false;
+    [Tooltip("Drag your 8 manual cube pieces here")]
+    public GameObject[] pieces = new GameObject[8];
+
+    [Header("Face Materials")]
+    public Material meatMat; public Material spaceMat;
+    public Material ruinsMat; public Material dreamMat;
+    public Material clinicMat; public Material forestMat;
+
     [Header("Layout")]
-    [FormerlySerializedAs("pieceOffset")]
-    [SerializeField, Tooltip("Half-size offset for spawning pieces when BuildPieces() is used.")]
-    private float pieceOffset = 0.5f;
-
-    [Header("Existing Pieces (Required)")]
-    [FormerlySerializedAs("existingPiecesRoot")]
-    [SerializeField, Tooltip("Root that contains the 8 cube pieces (e.g., CubeHolder/Cube).")]
-    private Transform cubePiecesRootTransform;
-    [FormerlySerializedAs("reparentExistingToCubeVisual")]
-    [SerializeField, Tooltip("Reparent pieces under this GameObject at runtime (Play Mode only). Recommended OFF for prebuilt cube prefabs.")]
-    private bool reparentPiecesToThis = false;
-
-    [Header("Debug")]
+    [SerializeField] private float pieceOffset = 0.5f;
 
     private CubeState cubeState;
     private GameObject cubePiecesRoot;
-    public GameObject[] pieces;
 
-    /// <summary>Transform space used to evaluate piece positions.</summary>
-    public Transform PiecesRoot => cubePiecesRootTransform != null ? cubePiecesRootTransform : transform;
+    public Transform PiecesRoot => (cubePiecesRoot != null) ? cubePiecesRoot.transform : transform;
 
-    private void Awake()
-    {
-        cubeState = GetComponent<CubeState>();
-    }
+    private void Awake() => cubeState = GetComponent<CubeState>();
 
     private void Start()
     {
-        CacheExistingPieces();
+        // Only build if the box is checked
+        if (rebuildOnStart)
+        {
+            BuildPieces();
+        }
+
         ApplyStickersFromState();
-    }
-
-    private void CacheExistingPieces()
-    {
-        if (cubePiecesRootTransform == null)
-        {
-            pieces = new GameObject[0];
-            return;
-        }
-
-        cubePiecesRoot = cubePiecesRootTransform.gameObject;
-
-        List<Transform> children = new List<Transform>();
-        foreach (Transform child in cubePiecesRootTransform)
-        {
-            children.Add(child);
-        }
-
-        List<GameObject> found = new List<GameObject>(children.Count);
-        bool canReparent = reparentPiecesToThis && Application.isPlaying;
-        if (canReparent && cubePiecesRootTransform != transform)
-        {
-            canReparent = false;
-        }
-        if (reparentPiecesToThis && !Application.isPlaying) { }
-
-        foreach (Transform child in children)
-        {
-            if (canReparent)
-            {
-                child.SetParent(transform, true);
-            }
-            if (child.GetComponent<CubePiece>() == null) { child.gameObject.AddComponent<CubePiece>(); }
-            found.Add(child.gameObject);
-        }
-
-        pieces = found.ToArray();
-
-        if (pieces.Length != 8) { }
-    }
-
-    /// <summary>Refresh the pieces array from the assigned Existing Pieces Root.</summary>
-    public void RefreshExistingPieces()
-    {
-        CacheExistingPieces();
     }
 
     public void BuildPieces()
     {
+        if (cubePiecePrefab == null) return;
+
         if (cubePiecesRoot == null)
         {
             Transform existing = transform.Find("CubePieces");
             cubePiecesRoot = existing != null ? existing.gameObject : new GameObject("CubePieces");
             cubePiecesRoot.transform.SetParent(transform, false);
         }
-
         foreach (Transform child in cubePiecesRoot.transform) Destroy(child.gameObject);
 
-        List<Vector3> positions = new List<Vector3>
-        {
-            new Vector3(-pieceOffset, -pieceOffset, -pieceOffset),
-            new Vector3(-pieceOffset, -pieceOffset,  pieceOffset),
-            new Vector3(-pieceOffset,  pieceOffset, -pieceOffset),
-            new Vector3(-pieceOffset,  pieceOffset,  pieceOffset),
-            new Vector3( pieceOffset, -pieceOffset, -pieceOffset),
-            new Vector3( pieceOffset, -pieceOffset,  pieceOffset),
-            new Vector3( pieceOffset,  pieceOffset, -pieceOffset),
-            new Vector3( pieceOffset,  pieceOffset,  pieceOffset),
+        pieces = new GameObject[8];
+        Vector3[] pos = {
+            new Vector3(-pieceOffset,-pieceOffset,-pieceOffset), new Vector3(-pieceOffset,-pieceOffset,pieceOffset),
+            new Vector3(-pieceOffset,pieceOffset,-pieceOffset), new Vector3(-pieceOffset,pieceOffset,pieceOffset),
+            new Vector3(pieceOffset,-pieceOffset,-pieceOffset), new Vector3(pieceOffset,-pieceOffset,pieceOffset),
+            new Vector3(pieceOffset,pieceOffset,-pieceOffset), new Vector3(pieceOffset,pieceOffset,pieceOffset)
         };
 
-        pieces = new GameObject[8];
-        for (int i = 0; i < positions.Count; i++)
+        for (int i = 0; i < 8; i++)
         {
-            GameObject piece = Instantiate(cubePiecePrefab, cubePiecesRoot.transform);
-            piece.transform.localPosition = positions[i];
-            if (piece.GetComponent<CubePiece>() == null) piece.AddComponent<CubePiece>();
-            pieces[i] = piece;
+            pieces[i] = Instantiate(cubePiecePrefab, cubePiecesRoot.transform);
+            pieces[i].transform.localPosition = pos[i];
+            if (pieces[i].GetComponent<CubePiece>() == null) pieces[i].AddComponent<CubePiece>();
         }
     }
 
     public void ApplyStickersFromState()
     {
-        if (cubeState == null || cubeState.tiles == null || cubeState.tiles.Length != 24) return;
-        if (pieces == null || pieces.Length == 0) return;
+        if (cubeState == null || pieces == null || pieces.Length == 0) return;
 
         foreach (GameObject piece in pieces)
         {
-            CubePiece cubePiece = piece.GetComponent<CubePiece>();
-            Vector3 local = PiecesRoot.InverseTransformPoint(piece.transform.position);
-            int xSign = Sign(local.x); int ySign = Sign(local.y); int zSign = Sign(local.z);
+            if (piece == null) continue;
+            CubePiece cp = piece.GetComponent<CubePiece>();
+            if (cp == null) continue;
 
-            // Interior faces to black
-            cubePiece.SetFaceColor(CubePiece.Face.PosX, Color.black);
-            cubePiece.SetFaceColor(CubePiece.Face.NegX, Color.black);
-            cubePiece.SetFaceColor(CubePiece.Face.PosY, Color.black);
-            cubePiece.SetFaceColor(CubePiece.Face.NegY, Color.black);
-            cubePiece.SetFaceColor(CubePiece.Face.PosZ, Color.black);
-            cubePiece.SetFaceColor(CubePiece.Face.NegZ, Color.black);
+            Vector3 local = transform.InverseTransformPoint(piece.transform.position);
+            int x = Sign(local.x); int y = Sign(local.y); int z = Sign(local.z);
 
-            if (xSign > 0) AssignAnimation(cubePiece, CubePiece.Face.PosX, 3, xSign, ySign, zSign);
-            else AssignAnimation(cubePiece, CubePiece.Face.NegX, 2, xSign, ySign, zSign);
-
-            if (ySign > 0) AssignAnimation(cubePiece, CubePiece.Face.PosY, 4, xSign, ySign, zSign);
-            else AssignAnimation(cubePiece, CubePiece.Face.NegY, 5, xSign, ySign, zSign);
-
-            if (zSign > 0) AssignAnimation(cubePiece, CubePiece.Face.PosZ, 0, xSign, ySign, zSign);
-            else AssignAnimation(cubePiece, CubePiece.Face.NegZ, 1, xSign, ySign, zSign);
+            if (x > 0) UpdateFace(cp, CubePiece.Face.PosX, 3, x, y, z); else UpdateFace(cp, CubePiece.Face.NegX, 2, x, y, z);
+            if (y > 0) UpdateFace(cp, CubePiece.Face.PosY, 4, x, y, z); else UpdateFace(cp, CubePiece.Face.NegY, 5, x, y, z);
+            if (z > 0) UpdateFace(cp, CubePiece.Face.PosZ, 0, x, y, z); else UpdateFace(cp, CubePiece.Face.NegZ, 1, x, y, z);
         }
     }
 
-    private void AssignAnimation(CubePiece cp, CubePiece.Face face, int faceIdx, int x, int y, int z)
+    private void UpdateFace(CubePiece cp, CubePiece.Face face, int fIdx, int x, int y, int z)
     {
-        int tileIdx = GetTileIndexForFace(faceIdx, x, y, z);
-        CubeState.TileColor tileColor = cubeState.tiles[tileIdx];
-
-        // This finds which corner of the 2x2 face this piece is (0, 1, 2, or 3)
-        int quadrantID = tileIdx % 4;
-
-        // Pick the sheet based on the color from CubeState
-        Sprite[] currentSheet = tileColor switch
+        int tileIdx = GetTileIndexForFace(fIdx, x, y, z);
+        Material m = cubeState.tiles[tileIdx] switch
         {
-            CubeState.TileColor.Red => meatSheet,
-            CubeState.TileColor.Blue => spaceSheet,
-            CubeState.TileColor.Orange => ruinsSheet,
-            // ... add the rest
-            _ => meatSheet
+            CubeState.TileColor.Red => meatMat,
+            CubeState.TileColor.Blue => spaceMat,
+            CubeState.TileColor.Orange => ruinsMat,
+            CubeState.TileColor.Yellow => dreamMat,
+            CubeState.TileColor.White => clinicMat,
+            CubeState.TileColor.Green => forestMat,
+            _ => meatMat
         };
-
-        cp.SetSticker(face, tileColor, currentSheet, quadrantID);
+        cp.SetSticker(face, cubeState.tiles[tileIdx], m);
     }
-
-    // ALL OF MARTE'S ORIGINAL METHODS BELOW
-    public static Color ToColor(CubeState.TileColor tile)
-    {
-        return tile switch
-        {
-            CubeState.TileColor.Red => new Color(0.80f, 0.20f, 0.20f),
-            CubeState.TileColor.Orange => new Color(0.85f, 0.45f, 0.05f),
-            CubeState.TileColor.Yellow => new Color(0.92f, 0.80f, 0.20f),
-            CubeState.TileColor.Green => new Color(0.20f, 0.55f, 0.30f),
-            CubeState.TileColor.Blue => new Color(0.15f, 0.35f, 0.65f),
-            CubeState.TileColor.White => new Color(0.92f, 0.92f, 0.92f),
-            _ => Color.magenta,
-        };
-    }
-
-    private int GetTileIndexForFace(int faceIndex, int xSign, int ySign, int zSign)
-    {
-        bool top; bool right;
-        switch (faceIndex)
-        {
-            case 0: top = ySign > 0; right = xSign > 0; break;
-            case 1: top = ySign > 0; right = xSign < 0; break;
-            case 2: top = ySign > 0; right = zSign > 0; break;
-            case 3: top = ySign > 0; right = zSign < 0; break;
-            case 4: top = zSign < 0; right = xSign > 0; break;
-            case 5: top = zSign > 0; right = xSign > 0; break;
-            default: top = true; right = true; break;
-        }
-        return (faceIndex * 4) + ((top ? 0 : 2) + (right ? 1 : 0));
-    }
-
-    private static int Sign(float value) => value >= 0f ? 1 : -1;
 
     public void SyncStateFromPieces()
     {
-        if (cubeState == null || cubeState.tiles == null || cubeState.tiles.Length != 24) return;
+        if (cubeState == null || pieces == null) return;
         foreach (GameObject piece in pieces)
         {
-            CubePiece cubePiece = piece.GetComponent<CubePiece>();
-            Vector3 local = PiecesRoot.InverseTransformPoint(piece.transform.position);
-            int xSign = Sign(local.x); int ySign = Sign(local.y); int zSign = Sign(local.z);
+            if (piece == null) continue;
+            CubePiece cp = piece.GetComponent<CubePiece>();
+            Vector3 local = transform.InverseTransformPoint(piece.transform.position);
+            int xS = Sign(local.x); int yS = Sign(local.y); int zS = Sign(local.z);
 
-            if (xSign > 0) cubeState.tiles[GetTileIndexForFace(3, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(PiecesRoot.right);
-            else cubeState.tiles[GetTileIndexForFace(2, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-PiecesRoot.right);
-
-            if (ySign > 0) cubeState.tiles[GetTileIndexForFace(4, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(PiecesRoot.up);
-            else cubeState.tiles[GetTileIndexForFace(5, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-PiecesRoot.up);
-
-            if (zSign > 0) cubeState.tiles[GetTileIndexForFace(0, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(PiecesRoot.forward);
-            else cubeState.tiles[GetTileIndexForFace(1, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-PiecesRoot.forward);
+            if (xS > 0) cubeState.tiles[GetTileIndexForFace(3, xS, yS, zS)] = cp.GetStickerFacingWorld(transform.right);
+            else cubeState.tiles[GetTileIndexForFace(2, xS, yS, zS)] = cp.GetStickerFacingWorld(-transform.right);
+            if (yS > 0) cubeState.tiles[GetTileIndexForFace(4, xS, yS, zS)] = cp.GetStickerFacingWorld(transform.up);
+            else cubeState.tiles[GetTileIndexForFace(5, xS, yS, zS)] = cp.GetStickerFacingWorld(-transform.up);
+            if (zS > 0) cubeState.tiles[GetTileIndexForFace(0, xS, yS, zS)] = cp.GetStickerFacingWorld(transform.forward);
+            else cubeState.tiles[GetTileIndexForFace(1, xS, yS, zS)] = cp.GetStickerFacingWorld(-transform.forward);
         }
     }
+
+    private int GetTileIndexForFace(int f, int x, int y, int z)
+    {
+        bool t = (f == 4) ? z < 0 : (f == 5) ? z > 0 : y > 0;
+        bool r = (f == 0) ? x > 0 : (f == 1) ? x < 0 : (f == 2) ? z > 0 : (f == 3) ? z < 0 : x > 0;
+        return (f * 4) + (t ? 0 : 2) + (r ? 1 : 0);
+    }
+    private int Sign(float v) => v >= 0f ? 1 : -1;
 }

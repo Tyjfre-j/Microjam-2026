@@ -96,6 +96,7 @@ public class CubePiece : MonoBehaviour
         }
     }
 
+
     private void ApplySticker(Face face)
     {
         if (!faceRenderers.TryGetValue(face, out Renderer renderer) || renderer == null) return;

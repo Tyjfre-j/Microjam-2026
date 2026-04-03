@@ -25,6 +25,7 @@ public class RotationAnimator : MonoBehaviour
     /// <summary>Invoked when a rotation starts.</summary>
     public event System.Action OnRotationStart;
     public event System.Action OnRotationComplete;
+    public event System.Action<RotationType> OnRotationCommitted;
 
     private void Awake()
     {
@@ -53,6 +54,7 @@ public class RotationAnimator : MonoBehaviour
             {
                 cubeVisual.SyncStateFromPieces();
             }
+            OnRotationCommitted?.Invoke(type);
             OnRotationComplete?.Invoke();
         });
     }

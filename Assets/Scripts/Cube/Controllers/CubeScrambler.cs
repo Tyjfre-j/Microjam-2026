@@ -15,6 +15,9 @@ public class CubeScrambler : MonoBehaviour
     private bool spawnPlayerAfterStartupRotations = true;
     [SerializeField] private int solvedRetryCount = 1;
 
+    public event System.Action OnStartupShuffleCompleted;
+    public bool IsStartupShuffleComplete { get; private set; }
+
     private CubeState cubeState;
     private CubeRotations cubeRotations;
     private CubeVisual cubeVisual;
@@ -76,6 +79,7 @@ public class CubeScrambler : MonoBehaviour
 
     private IEnumerator StartupSequence()
     {
+        IsStartupShuffleComplete = false;
         PreparePlayerForStartupShuffle();
         SetInputEnabled(false);
 
@@ -109,6 +113,8 @@ public class CubeScrambler : MonoBehaviour
         cubeState.DebugPrintState();
         SetInputEnabled(true);
         SpawnPlayerAfterStartupShuffle();
+        IsStartupShuffleComplete = true;
+        OnStartupShuffleCompleted?.Invoke();
     }
 
     private IEnumerator AnimatedShuffleWithRetry(int numMoves, int retryCount)

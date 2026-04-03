@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 public class PivotCubeController : MonoBehaviour
 {
     public Transform pivot;        // Drag your "CubeCenter" Empty GameObject here
-    public string cubeTag = "Cube";
+    [SerializeField] private CubeManager cubeManager;
     public float rotationSpeed = 400f; 
     private bool isRotating = false;
     public bool IsRotating => isRotating;
@@ -19,69 +19,61 @@ public string currentLayerName; // Add this line
         // Safety check: Make sure you assigned the pivot in the Inspector
         if (pivot == null || isRotating) return;
 
-        // Using pivot's local axes (Right, Up, Forward) 
-        // This allows the cube to work even if it's tilted!
-        if (Keyboard.current.fKey.wasPressedThisFrame) StartCoroutine(RotateSequence(pivot.right, "front"));
-        if (Keyboard.current.kKey.wasPressedThisFrame) StartCoroutine(RotateSequence(pivot.right, "back"));
-        
-        if (Keyboard.current.tKey.wasPressedThisFrame) StartCoroutine(RotateSequence(pivot.up, "top"));
-        if (Keyboard.current.bKey.wasPressedThisFrame) StartCoroutine(RotateSequence(pivot.up, "bottom"));
-            
-        if (Keyboard.current.rKey.wasPressedThisFrame) StartCoroutine(RotateSequence(pivot.forward, "right"));
-        if (Keyboard.current.lKey.wasPressedThisFrame) StartCoroutine(RotateSequence(pivot.forward, "left"));
+        if (cubeManager == null) cubeManager = GetComponentInParent<CubeManager>();
+        if (cubeManager == null) return;
+
+        if (Keyboard.current.fKey.wasPressedThisFrame) RotateLayer("front");
+        if (Keyboard.current.kKey.wasPressedThisFrame) RotateLayer("back");
+
+        if (Keyboard.current.tKey.wasPressedThisFrame) RotateLayer("top");
+        if (Keyboard.current.bKey.wasPressedThisFrame) RotateLayer("bottom");
+
+        if (Keyboard.current.rKey.wasPressedThisFrame) RotateLayer("right");
+        if (Keyboard.current.lKey.wasPressedThisFrame) RotateLayer("left");
     }
 
-    public System.Collections.IEnumerator RotateSequence(Vector3 axis, string layerName)
+    public void RotateLayer(string layerName)
     {
-        currentLayerName = layerName; // <--- ADD THIS LINE
+        if (cubeManager == null) return;
+        currentLayerName = layerName;
         isRotating = true;
         activeLayer.Clear();
 
-        GameObject[] allCubes = GameObject.FindGameObjectsWithTag(cubeTag) ;
-        
-        foreach (GameObject cube in allCubes)
+        bool clockwise = true;
+        CubeManager.Axis axis;
+        int layerIndex;
+
+        switch (layerName)
         {
-            // We check the position RELATIVE to the pivot
-            Vector3 relativePos = pivot.InverseTransformPoint(cube.transform.position);
-            
-            if (layerName == "front" && relativePos.x <= -0.1f) activeLayer.Add(cube);
-            else if (layerName == "back" && relativePos.x >= 0.1f) activeLayer.Add(cube);
-            else if (layerName == "top" && relativePos.y >= 0.1f) activeLayer.Add(cube);
-            else if (layerName == "bottom" && relativePos.y <= -0.1f) activeLayer.Add(cube);
-            else if (layerName == "right" && relativePos.z <= -0.1f) activeLayer.Add(cube);
-            else if (layerName == "left" && relativePos.z >= 0.1f) activeLayer.Add(cube);
+            case "front":
+                axis = CubeManager.Axis.X;
+                layerIndex = 0;
+                break;
+            case "back":
+                axis = CubeManager.Axis.X;
+                layerIndex = 1;
+                break;
+            case "top":
+                axis = CubeManager.Axis.Y;
+                layerIndex = 1;
+                break;
+            case "bottom":
+                axis = CubeManager.Axis.Y;
+                layerIndex = 0;
+                break;
+            case "right":
+                axis = CubeManager.Axis.Z;
+                layerIndex = 0;
+                break;
+            case "left":
+                axis = CubeManager.Axis.Z;
+                layerIndex = 1;
+                break;
+            default:
+                isRotating = false;
+                return;
         }
 
-        float rotatedAmount = 0;
-        while (rotatedAmount < 90f)
-        {
-            float step = rotationSpeed * Time.deltaTime;
-            if (rotatedAmount + step > 90f) step = 90f - rotatedAmount;
-
-            foreach (GameObject cube in activeLayer)
-            {
-                // NOW ROTATING AROUND THE PIVOT POSITION
-                cube.transform.RotateAround(pivot.position, axis, step);
-            }
-            rotatedAmount += step;
-            yield return null;
-        }
-
-        // Snap Logic using the Pivot's local space
-        foreach (GameObject cube in activeLayer)
-        {
-            Vector3 localP = pivot.InverseTransformPoint(cube.transform.position);
-            localP = new Vector3(Mathf.Round(localP.x * 2f) / 2f, Mathf.Round(localP.y * 2f) / 2f, Mathf.Round(localP.z * 2f) / 2f);
-            cube.transform.position = pivot.TransformPoint(localP);
-            
-            // Snap rotation to 90 degree increments relative to pivot
-            cube.transform.rotation = Quaternion.Euler(
-                Mathf.Round(cube.transform.eulerAngles.x / 90) * 90,
-                Mathf.Round(cube.transform.eulerAngles.y / 90) * 90,
-                Mathf.Round(cube.transform.eulerAngles.z / 90) * 90
-            );
-        }
-
-        isRotating = false;
+        cubeManager.RotateLayer(axis, layerIndex, clockwise, () => { isRotating = false; });
     }
 }

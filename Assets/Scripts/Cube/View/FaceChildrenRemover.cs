@@ -5,6 +5,7 @@ public class FaceChildrenRemover : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private CubeManager cubeManager;
+    [SerializeField] private PlayerController playerController;
     [SerializeField, Tooltip("Root that contains the 8 cube pieces (e.g., CubeHolder/Cube).")]
     private Transform cubeRoot;
     [Header("Platform Templates (Per Face)")]
@@ -50,6 +51,7 @@ public class FaceChildrenRemover : MonoBehaviour
     {
         if (cubeManager == null) cubeManager = GetComponent<CubeManager>();
         if (cubeRoot == null) cubeRoot = transform;
+        if (playerController == null) playerController = FindAnyObjectByType<PlayerController>();
     }
 
     private void OnEnable()
@@ -85,6 +87,7 @@ public class FaceChildrenRemover : MonoBehaviour
 
     private void HandleRotationStart(CubeManager.Axis axis, int layerIndex, bool clockwise)
     {
+        playerController?.Freeze();
         HashSet<CubePiece> affected = CollectPiecesInLayer(axis, layerIndex);
         int removed = RemoveFaceChildren(affected);
         Log($"Removed {removed} face children for rotated layer.");
@@ -106,6 +109,7 @@ public class FaceChildrenRemover : MonoBehaviour
         int spawned = RespawnPlatforms(affected);
         Log($"Respawned {spawned} platform groups for rotated layer.");
         OnPlatformsRespawned?.Invoke();
+        playerController?.Unfreeze();
     }
 
     private int RemoveFaceChildren(HashSet<CubePiece> onlyPieces)

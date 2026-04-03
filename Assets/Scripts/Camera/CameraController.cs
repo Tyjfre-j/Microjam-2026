@@ -53,10 +53,7 @@ public class CameraController : MonoBehaviour
     private IEnumerator SwitchFaceCoroutine(int faceIndex)
     {
         isTransitioning = true;
-        if (playerController != null)
-        {
-            playerController.SetInputEnabled(false);
-        }
+        playerController?.Freeze();
 
         GetFacePose(faceIndex, out Vector3 targetPos, out Quaternion targetRot);
         Vector3 startPos = transform.position;
@@ -75,10 +72,7 @@ public class CameraController : MonoBehaviour
         transform.position = targetPos;
         transform.rotation = targetRot;
 
-        if (playerController != null)
-        {
-            playerController.SetInputEnabled(true);
-        }
+        playerController?.Unfreeze();
 
         isTransitioning = false;
         Log($"Switched to face {faceIndex}");

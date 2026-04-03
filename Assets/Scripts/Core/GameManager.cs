@@ -81,10 +81,7 @@ public class GameManager : MonoBehaviour
 
         if (currentState == GameState.Won)
         {
-            if (playerController != null)
-            {
-                playerController.SetInputEnabled(false);
-            }
+            playerController?.Freeze();
 
             if (winPanel != null)
             {

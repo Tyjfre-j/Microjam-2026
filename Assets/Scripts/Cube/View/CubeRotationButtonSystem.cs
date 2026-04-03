@@ -74,6 +74,7 @@ public class CubeRotationButtonSystem : MonoBehaviour
     private int lastDebugFaceIndex = -999;
     private Vector3 lastDebugForwardLocal = Vector3.zero;
     private float lastDebugDot = 0f;
+    private readonly HashSet<int> warnedMissingAnchorFaces = new HashSet<int>();
 
     private static readonly Vector3[] LocalFaceNormals =
     {
@@ -88,7 +89,10 @@ public class CubeRotationButtonSystem : MonoBehaviour
     // ── Unity ─────────────────────────────────────────────────────
     private void Awake()
     {
-        if (rotationAnimator == null) rotationAnimator = GetComponent<RotationAnimator>();
+        if (rotationAnimator == null)
+        {
+            rotationAnimator = GetComponent<RotationAnimator>();
+        }
         if (cubeRoot == null)         cubeRoot         = transform;
         if (targetCamera == null)     targetCamera     = Camera.main;
         if (playerController == null)   playerController   = FindAnyObjectByType<PlayerController>();
@@ -100,11 +104,7 @@ public class CubeRotationButtonSystem : MonoBehaviour
 
     private void OnEnable()
     {
-        if (rotationAnimator != null && lockDuringRotation)
-        {
-            rotationAnimator.OnRotationStart    += HandleRotationStart;
-            rotationAnimator.OnRotationComplete += HandleRotationComplete;
-        }
+        BindRotationAnimatorEvents(rotationAnimator);
         if (faceChildrenRemover != null && lockUntilPlatformsRespawned)
         {
             faceChildrenRemover.OnPlatformsRespawned += HandlePlatformsRespawned;
@@ -113,11 +113,7 @@ public class CubeRotationButtonSystem : MonoBehaviour
 
     private void OnDisable()
     {
-        if (rotationAnimator != null && lockDuringRotation)
-        {
-            rotationAnimator.OnRotationStart    -= HandleRotationStart;
-            rotationAnimator.OnRotationComplete -= HandleRotationComplete;
-        }
+        UnbindRotationAnimatorEvents(rotationAnimator);
         if (faceChildrenRemover != null && lockUntilPlatformsRespawned)
         {
             faceChildrenRemover.OnPlatformsRespawned -= HandlePlatformsRespawned;
@@ -172,8 +168,7 @@ public class CubeRotationButtonSystem : MonoBehaviour
     {
         if (Time.frameCount == lastTriggerFrame)          return;
         if (isLocked)                                     return;
-        if (rotationAnimator == null)                     return;
-        if (rotationAnimator.isAnimating)                 return;
+        if (rotationAnimator != null && rotationAnimator.isAnimating) return;
 
         if (!TryGetOrientation(out OrientationCache orientation)) return;
 
@@ -193,7 +188,95 @@ public class CubeRotationButtonSystem : MonoBehaviour
         }
 
         lastTriggerFrame = Time.frameCount;
-        rotationAnimator.AnimateAndApplyRotation(type);
+        if (TryStartRotation(type, out RotationAnimator activeAnimator))
+        {
+            if (activeAnimator != rotationAnimator)
+            {
+                SetRotationAnimator(activeAnimator);
+            }
+            return;
+        }
+
+        if (showActionResolutionDebug)
+        {
+            Debug.LogWarning("[CubeRotationButtonSystem] Rotation request did not start. Check RotationAnimator/CubeManager/CubeRoot wiring.");
+        }
+    }
+
+    private bool TryStartRotation(RotationAnimator.RotationType type, out RotationAnimator activeAnimator)
+    {
+        activeAnimator = null;
+
+        if (TryStartWithAnimator(rotationAnimator, type, out activeAnimator))
+        {
+            return true;
+        }
+
+        RotationAnimator[] candidates = FindObjectsByType<RotationAnimator>(FindObjectsInactive.Include);
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            RotationAnimator candidate = candidates[i];
+            if (candidate == null || candidate == rotationAnimator) continue;
+            if (cubeRoot != null && candidate.transform != cubeRoot) continue;
+
+            if (TryStartWithAnimator(candidate, type, out activeAnimator))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            RotationAnimator candidate = candidates[i];
+            if (candidate == null || candidate == rotationAnimator) continue;
+
+            if (TryStartWithAnimator(candidate, type, out activeAnimator))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryStartWithAnimator(
+        RotationAnimator animator,
+        RotationAnimator.RotationType type,
+        out RotationAnimator activeAnimator)
+    {
+        activeAnimator = null;
+        if (animator == null) return false;
+        if (animator.isAnimating) return false;
+
+        animator.AnimateAndApplyRotation(type);
+        if (!animator.isAnimating) return false;
+
+        activeAnimator = animator;
+        return true;
+    }
+
+    private void SetRotationAnimator(RotationAnimator newAnimator)
+    {
+        if (newAnimator == rotationAnimator) return;
+
+        UnbindRotationAnimatorEvents(rotationAnimator);
+        rotationAnimator = newAnimator;
+        BindRotationAnimatorEvents(rotationAnimator);
+    }
+
+    private void BindRotationAnimatorEvents(RotationAnimator animator)
+    {
+        if (!lockDuringRotation || animator == null) return;
+        animator.OnRotationStart += HandleRotationStart;
+        animator.OnRotationComplete += HandleRotationComplete;
+    }
+
+    private void UnbindRotationAnimatorEvents(RotationAnimator animator)
+    {
+        if (!lockDuringRotation || animator == null) return;
+        animator.OnRotationStart -= HandleRotationStart;
+        animator.OnRotationComplete -= HandleRotationComplete;
     }
 
     /// <summary>Resolve a button action for a specific face basis (debug/testing).</summary>
@@ -234,7 +317,11 @@ public class CubeRotationButtonSystem : MonoBehaviour
 
     private void HandleRotationComplete()
     {
-        if (lockUntilPlatformsRespawned && faceChildrenRemover != null)
+        // In startup-only rebuild mode, FaceChildrenRemover does not emit per-rotation respawn events.
+        // Do not wait for OnPlatformsRespawned in that mode or buttons/player can stay locked.
+        if (lockUntilPlatformsRespawned
+            && faceChildrenRemover != null
+            && !faceChildrenRemover.StartupOnlyRebuild)
         {
             return;
         }
@@ -289,7 +376,10 @@ public class CubeRotationButtonSystem : MonoBehaviour
         if (!TryGetAnchorsByCorner(facePieces, orientation, out List<Transform>[] cornerAnchors))
         {
             reason = "no ButtonAnchor platforms found — tag 2 platforms per corner with 'ButtonAnchor'";
-            Debug.LogWarning($"[CubeRotationButtonSystem] {reason}");
+            if (warnedMissingAnchorFaces.Add(orientation.faceIndex))
+            {
+                Debug.LogWarning($"[CubeRotationButtonSystem] {reason}");
+            }
             return false;
         }
 
@@ -320,6 +410,7 @@ public class CubeRotationButtonSystem : MonoBehaviour
             ConfigureButton(i * 2 + 1, localPosB, actionB, GetLabel(actionB));
         }
 
+        warnedMissingAnchorFaces.Remove(orientation.faceIndex);
         reason = "ok";
         return true;
     }

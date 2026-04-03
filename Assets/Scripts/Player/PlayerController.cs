@@ -22,13 +22,14 @@ public class PlayerController : MonoBehaviour
     private Vector3 currentUp = Vector3.up;
     private bool isFrozen;
 
+    private void Awake()
+    {
+        EnsureRigidbodySetup();
+    }
+
     private void Start()
     {
-        rb = GetComponent<Rigidbody>();
-        rb.useGravity = false;
-        rb.constraints = RigidbodyConstraints.FreezeRotation;
-        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        EnsureRigidbodySetup();
 
         // Set player to Ignore Raycast layer so he doesn't hit himself
         gameObject.layer = 2;
@@ -50,6 +51,8 @@ public class PlayerController : MonoBehaviour
 
     private void ExecuteJump()
     {
+        if (!EnsureRigidbodySetup()) return;
+
         // Kill existing vertical velocity for a snappy double jump
         Vector3 localVel = transform.InverseTransformDirection(rb.linearVelocity);
         localVel.y = 0f;
@@ -64,6 +67,8 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (!EnsureRigidbodySetup()) return;
+
         if (isFrozen)
         {
             rb.linearVelocity = Vector3.zero;
@@ -123,6 +128,8 @@ public class PlayerController : MonoBehaviour
     /// <summary>Enable or disable player input.</summary>
     public void SetInputEnabled(bool enabled)
     {
+        if (!EnsureRigidbodySetup()) return;
+
         isFrozen = !enabled;
         if (isFrozen)
         {
@@ -133,6 +140,8 @@ public class PlayerController : MonoBehaviour
     /// <summary>Freeze the player instantly (used during cube rotation).</summary>
     public void Freeze()
     {
+        if (!EnsureRigidbodySetup()) return;
+
         isFrozen = true;
         rb.linearVelocity = Vector3.zero;
     }
@@ -152,5 +161,24 @@ public class PlayerController : MonoBehaviour
     private void Log(string msg)
     {
         if (showDebugLogs) Debug.Log($"[{GetType().Name}] {msg}");
+    }
+
+    private bool EnsureRigidbodySetup()
+    {
+        if (rb == null)
+        {
+            rb = GetComponent<Rigidbody>();
+        }
+
+        if (rb == null)
+        {
+            return false;
+        }
+
+        rb.useGravity = false;
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        return true;
     }
 }

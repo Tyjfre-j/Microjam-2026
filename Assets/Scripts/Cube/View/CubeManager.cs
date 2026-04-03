@@ -97,6 +97,153 @@ public class CubeManager : MonoBehaviour
         CachePiecesFromChildren();
     }
 
+    /// <summary>
+    /// Validates that the authoritative gameplay cube root has exactly 8 direct-child
+    /// pieces with unique in-range grid positions.
+    /// </summary>
+    public bool ValidateAuthoritativeCubeLayout(out string error)
+    {
+        error = string.Empty;
+
+        if (cubeRoot == null)
+        {
+            error = "cubeRoot is null.";
+            return false;
+        }
+
+        if (TryValidateDirectChildLayout(cubeRoot, out error))
+        {
+            return true;
+        }
+
+        if (TryFindAuthoritativeCubeRoot(out Transform resolvedRoot, out string resolveError))
+        {
+            string previousName = cubeRoot != null ? cubeRoot.name : "null";
+            cubeRoot = resolvedRoot;
+            CachePiecesFromChildren();
+            Log($"Auto-resolved cubeRoot from '{previousName}' to '{cubeRoot.name}'.");
+            error = string.Empty;
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(resolveError))
+        {
+            error = $"{error} {resolveError}";
+        }
+
+        return false;
+    }
+
+    private bool TryValidateDirectChildLayout(Transform root, out string error)
+    {
+        error = string.Empty;
+        if (root == null)
+        {
+            error = "cubeRoot is null.";
+            return false;
+        }
+
+        int pieceCount = 0;
+        HashSet<Vector3Int> uniqueSlots = new HashSet<Vector3Int>();
+
+        foreach (Transform child in root)
+        {
+            if (child == null) continue;
+
+            CubePiece piece = child.GetComponent<CubePiece>();
+            if (piece == null) continue;
+
+            pieceCount++;
+            Vector3Int pos = piece.GridPosition;
+            if (!IsValidGridPosition(pos))
+            {
+                error = $"Piece '{piece.name}' has out-of-range grid position {pos}.";
+                return false;
+            }
+
+            if (!uniqueSlots.Add(pos))
+            {
+                error = $"Duplicate grid slot detected at {pos}.";
+                return false;
+            }
+        }
+
+        if (pieceCount != 8)
+        {
+            error = $"Found {pieceCount} direct child pieces under cubeRoot; expected 8.";
+            return false;
+        }
+
+        if (uniqueSlots.Count != 8)
+        {
+            error = $"Found {uniqueSlots.Count} unique grid slots; expected 8.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryFindAuthoritativeCubeRoot(out Transform resolvedRoot, out string error)
+    {
+        resolvedRoot = null;
+        error = "";
+
+        if (cubeRoot == null)
+        {
+            error = "Cannot auto-resolve cubeRoot because current root is null.";
+            return false;
+        }
+
+        Transform[] candidates = cubeRoot.GetComponentsInChildren<Transform>(true);
+        int bestDepth = int.MaxValue;
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            Transform candidate = candidates[i];
+            if (candidate == null) continue;
+
+            if (!TryValidateDirectChildLayout(candidate, out _))
+            {
+                continue;
+            }
+
+            int depth = GetDepthFromRoot(cubeRoot, candidate);
+            if (depth >= 0 && depth < bestDepth)
+            {
+                bestDepth = depth;
+                resolvedRoot = candidate;
+            }
+        }
+
+        if (resolvedRoot == null)
+        {
+            error = "No descendant transform with exactly 8 unique direct-child CubePiece entries was found.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static int GetDepthFromRoot(Transform root, Transform candidate)
+    {
+        if (root == null || candidate == null) return -1;
+
+        int depth = 0;
+        Transform current = candidate;
+        while (current != null)
+        {
+            if (current == root)
+            {
+                return depth;
+            }
+
+            current = current.parent;
+            depth++;
+        }
+
+        return -1;
+    }
+
     private IEnumerator RotateLayerRoutine(Axis axis, int layerIndex, bool clockwise, List<CubePiece> layerPieces, System.Action onComplete)
     {
         isRotating = true;
@@ -154,22 +301,49 @@ public class CubeManager : MonoBehaviour
         if (cubeRoot == null) cubeRoot = transform;
 
         int count = 0;
+        bool[] occupied = new bool[CubeSize * CubeSize * CubeSize];
+
         foreach (Transform child in cubeRoot)
         {
             CubePiece piece = child.GetComponent<CubePiece>();
             if (piece == null) continue;
+
             Vector3Int pos = piece.GridPosition;
-            if (!IsValidGridPosition(pos))
+
+            int slot = ToLinearIndex(pos);
+            bool gridPosIsUsable = IsValidGridPosition(pos) && slot >= 0 && slot < occupied.Length && !occupied[slot];
+
+            if (!gridPosIsUsable)
             {
-                Log($"Piece '{piece.name}' has invalid grid position {pos}.");
+                // Recover slot from piece local position to avoid a dead cube when inspector grid data is stale.
+                Vector3Int recovered = GetClosestFreeGridSlot(piece.CachedTransform.localPosition, occupied);
+                if (!IsValidGridPosition(recovered))
+                {
+                    Log($"Piece '{piece.name}' could not be assigned to a free grid slot.");
+                    continue;
+                }
+
+                if (!IsValidGridPosition(pos))
+                {
+                    Log($"Piece '{piece.name}' had invalid grid position {pos}. Recovered as {recovered}.");
+                }
+                else
+                {
+                    Log($"Grid slot {pos} already occupied. Recovered '{piece.name}' as {recovered}.");
+                }
+
+                pos = recovered;
+                slot = ToLinearIndex(pos);
+                piece.SetGridPosition(pos);
+            }
+
+            if (slot < 0 || slot >= occupied.Length || occupied[slot])
+            {
                 continue;
             }
-            if (cube[pos.x, pos.y, pos.z] != null)
-            {
-                Log($"Grid slot {pos} already occupied. Check for duplicates.");
-                continue;
-            }
+
             cube[pos.x, pos.y, pos.z] = piece;
+            occupied[slot] = true;
             SnapPieceTransform(piece);
             count++;
         }
@@ -277,6 +451,41 @@ public class CubeManager : MonoBehaviour
         float y = (gridPos.y - center) * cellSize;
         float z = (gridPos.z - center) * cellSize;
         return new Vector3(x, y, z) + gridOriginOffset;
+    }
+
+    private Vector3Int GetClosestFreeGridSlot(Vector3 pieceLocalPosition, bool[] occupied)
+    {
+        float bestDist = float.MaxValue;
+        Vector3Int best = new Vector3Int(-1, -1, -1);
+
+        for (int x = 0; x < CubeSize; x++)
+        {
+            for (int y = 0; y < CubeSize; y++)
+            {
+                for (int z = 0; z < CubeSize; z++)
+                {
+                    Vector3Int candidate = new Vector3Int(x, y, z);
+                    int slot = ToLinearIndex(candidate);
+                    if (slot < 0 || slot >= occupied.Length || occupied[slot]) continue;
+
+                    Vector3 target = GetLocalPositionFromGrid(candidate);
+                    float dist = (target - pieceLocalPosition).sqrMagnitude;
+                    if (dist < bestDist)
+                    {
+                        bestDist = dist;
+                        best = candidate;
+                    }
+                }
+            }
+        }
+
+        return best;
+    }
+
+    private int ToLinearIndex(Vector3Int pos)
+    {
+        if (!IsValidGridPosition(pos)) return -1;
+        return (pos.x * CubeSize * CubeSize) + (pos.y * CubeSize) + pos.z;
     }
 
     private Vector3 AxisToVector(Axis axis)

@@ -1,11 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-<<<<<<< HEAD
-
-public class CubeScrambler : MonoBehaviour
-{
-    [SerializeField] private int scrambleMoves = 10;
-=======
 using System.Collections;
 
 public class CubeScrambler : MonoBehaviour
@@ -23,7 +17,6 @@ public class CubeScrambler : MonoBehaviour
 
     public event System.Action OnStartupShuffleCompleted;
     public bool IsStartupShuffleComplete { get; private set; }
->>>>>>> origin/dev
 
     private CubeState cubeState;
     private CubeRotations cubeRotations;
@@ -35,10 +28,7 @@ public class CubeScrambler : MonoBehaviour
         public CubeManager.Axis axis;
         public int layerIndex;
         public bool clockwise;
-<<<<<<< HEAD
-=======
         public RotationAnimator.RotationType rotationType;
->>>>>>> origin/dev
         public System.Action applyState;
     }
 
@@ -50,14 +40,11 @@ public class CubeScrambler : MonoBehaviour
         cubeRotations = GetComponent<CubeRotations>();
         cubeVisual = GetComponent<CubeVisual>();
         cubeManager = GetComponent<CubeManager>();
-<<<<<<< HEAD
-=======
         if (faceChildrenRemover == null) faceChildrenRemover = GetComponent<FaceChildrenRemover>();
         if (faceChildrenRemover == null) faceChildrenRemover = FindAnyObjectByType<FaceChildrenRemover>();
         if (rotationAnimator == null) rotationAnimator = GetComponent<RotationAnimator>();
         if (rotationAnimatorInput == null) rotationAnimatorInput = GetComponent<RotationAnimatorInput>();
         if (playerController == null) playerController = FindAnyObjectByType<PlayerController>();
->>>>>>> origin/dev
 
         if (cubeState == null) { return; }
         if (cubeRotations == null) { return; }
@@ -65,20 +52,6 @@ public class CubeScrambler : MonoBehaviour
 
         moves = new List<Move>
         {
-<<<<<<< HEAD
-            new Move { axis = CubeManager.Axis.Y, layerIndex = 1, clockwise = true,  applyState = cubeRotations.RotateU },
-            new Move { axis = CubeManager.Axis.Y, layerIndex = 1, clockwise = false, applyState = cubeRotations.RotateUPrime },
-            new Move { axis = CubeManager.Axis.Y, layerIndex = 0, clockwise = true,  applyState = cubeRotations.RotateD },
-            new Move { axis = CubeManager.Axis.Y, layerIndex = 0, clockwise = false, applyState = cubeRotations.RotateDPrime },
-            new Move { axis = CubeManager.Axis.X, layerIndex = 1, clockwise = true,  applyState = cubeRotations.RotateR },
-            new Move { axis = CubeManager.Axis.X, layerIndex = 1, clockwise = false, applyState = cubeRotations.RotateRPrime },
-            new Move { axis = CubeManager.Axis.X, layerIndex = 0, clockwise = true,  applyState = cubeRotations.RotateL },
-            new Move { axis = CubeManager.Axis.X, layerIndex = 0, clockwise = false, applyState = cubeRotations.RotateLPrime },
-            new Move { axis = CubeManager.Axis.Z, layerIndex = 1, clockwise = true,  applyState = cubeRotations.RotateF },
-            new Move { axis = CubeManager.Axis.Z, layerIndex = 1, clockwise = false, applyState = cubeRotations.RotateFPrime },
-            new Move { axis = CubeManager.Axis.Z, layerIndex = 0, clockwise = true,  applyState = cubeRotations.RotateB },
-            new Move { axis = CubeManager.Axis.Z, layerIndex = 0, clockwise = false, applyState = cubeRotations.RotateBPrime },
-=======
             new Move { axis = CubeManager.Axis.Y, layerIndex = 1, clockwise = true,  rotationType = RotationAnimator.RotationType.U,      applyState = cubeRotations.RotateU },
             new Move { axis = CubeManager.Axis.Y, layerIndex = 1, clockwise = false, rotationType = RotationAnimator.RotationType.UPrime, applyState = cubeRotations.RotateUPrime },
             new Move { axis = CubeManager.Axis.Y, layerIndex = 0, clockwise = true,  rotationType = RotationAnimator.RotationType.D,      applyState = cubeRotations.RotateD },
@@ -91,7 +64,6 @@ public class CubeScrambler : MonoBehaviour
             new Move { axis = CubeManager.Axis.Z, layerIndex = 1, clockwise = false, rotationType = RotationAnimator.RotationType.FPrime, applyState = cubeRotations.RotateFPrime },
             new Move { axis = CubeManager.Axis.Z, layerIndex = 0, clockwise = true,  rotationType = RotationAnimator.RotationType.B,      applyState = cubeRotations.RotateB },
             new Move { axis = CubeManager.Axis.Z, layerIndex = 0, clockwise = false, rotationType = RotationAnimator.RotationType.BPrime, applyState = cubeRotations.RotateBPrime },
->>>>>>> origin/dev
         };
     }
 
@@ -102,16 +74,6 @@ public class CubeScrambler : MonoBehaviour
             return;
         }
 
-<<<<<<< HEAD
-        cubeState.InitSolvedState();
-        Scramble(scrambleMoves);
-
-        cubeState.DebugPrintState();
-
-        if (cubeVisual != null)
-        {
-            cubeVisual.ApplyStickersFromState();
-=======
         StartCoroutine(StartupSequence());
     }
 
@@ -203,7 +165,6 @@ public class CubeScrambler : MonoBehaviour
                 cubeManager.RotateLayerImmediate(move.axis, move.layerIndex, move.clockwise);
                 move.applyState?.Invoke();
             }
->>>>>>> origin/dev
         }
     }
 

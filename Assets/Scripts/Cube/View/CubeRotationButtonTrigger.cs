@@ -11,6 +11,7 @@ public class CubeRotationButtonTrigger : MonoBehaviour
     // --- ADDED ---
     [SerializeField] private bool useButtonColliderBounds = true;
     [SerializeField] private float proximityRadius = 1.2f;
+    [SerializeField] private bool showDebugLogs = false;
 
     [Header("Prompt")]
     [SerializeField] private bool showPrompt = true;
@@ -20,6 +21,8 @@ public class CubeRotationButtonTrigger : MonoBehaviour
     private GUIStyle _promptStyle;
     // --- ADDED ---
     private Collider _buttonCollider;
+    private bool _loggedMissingPlayer;
+    private bool _loggedMissingSystem;
 
     private void Awake()
     {
@@ -29,14 +32,38 @@ public class CubeRotationButtonTrigger : MonoBehaviour
         // --- ADDED ---
         _buttonCollider = GetComponent<Collider>();
 
-        // Find player once
-        GameObject playerGO = GameObject.FindGameObjectWithTag(playerTag);
-        if (playerGO != null) _playerTransform = playerGO.transform;
+        ResolvePlayerTransform();
     }
 
     private void Update()
     {
-        if (_playerTransform == null) return;
+        if (_playerTransform == null)
+        {
+            ResolvePlayerTransform();
+            if (_playerTransform == null)
+            {
+                if (showDebugLogs && !_loggedMissingPlayer)
+                {
+                    Debug.LogWarning($"[CubeRotationButtonTrigger] No player found for '{name}' (tag='{playerTag}').");
+                    _loggedMissingPlayer = true;
+                }
+                return;
+            }
+
+            _loggedMissingPlayer = false;
+        }
+
+        if (buttonSystem == null)
+        {
+            if (showDebugLogs && !_loggedMissingSystem)
+            {
+                Debug.LogWarning($"[CubeRotationButtonTrigger] No CubeRotationButtonSystem linked for '{name}'.");
+                _loggedMissingSystem = true;
+            }
+            return;
+        }
+
+        _loggedMissingSystem = false;
 
         // --- CHANGED ---
         // Proximity check — use the button's own collider space when available
@@ -53,7 +80,11 @@ public class CubeRotationButtonTrigger : MonoBehaviour
 
         if (_playerNearby && Keyboard.current != null && Keyboard.current[interactKey].wasPressedThisFrame)
         {
-            buttonSystem?.TriggerAction(action);
+            if (showDebugLogs)
+            {
+                Debug.Log($"[CubeRotationButtonTrigger] Interaction on '{name}' -> action '{action}'.");
+            }
+            buttonSystem.TriggerAction(action);
         }
     }
 
@@ -86,6 +117,11 @@ public class CubeRotationButtonTrigger : MonoBehaviour
         action = newAction;
     }
 
+    public void SetButtonSystem(CubeRotationButtonSystem system)
+    {
+        buttonSystem = system;
+    }
+
     // Kept for compatibility — no longer needed but won't break anything
     public void SetInteractAction(UnityEngine.InputSystem.InputActionReference actionRef) { }
 
@@ -109,5 +145,21 @@ public class CubeRotationButtonTrigger : MonoBehaviour
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, proximityRadius);
+    }
+
+    private void ResolvePlayerTransform()
+    {
+        GameObject playerGO = GameObject.FindGameObjectWithTag(playerTag);
+        if (playerGO != null)
+        {
+            _playerTransform = playerGO.transform;
+            return;
+        }
+
+        PlayerController player = FindAnyObjectByType<PlayerController>(FindObjectsInactive.Include);
+        if (player != null)
+        {
+            _playerTransform = player.transform;
+        }
     }
 }

@@ -44,6 +44,7 @@ public class RotationAnimatorInput : MonoBehaviour
         if (rotationAnimator != null && disableInputDuringRotation)
         {
             rotationAnimator.OnRotationStart += HandleRotationStart;
+            rotationAnimator.OnRotationComplete += HandleRotationComplete;
         }
         if (faceChildrenRemover != null && disableInputDuringRotation)
         {
@@ -57,6 +58,7 @@ public class RotationAnimatorInput : MonoBehaviour
         if (rotationAnimator != null && disableInputDuringRotation)
         {
             rotationAnimator.OnRotationStart -= HandleRotationStart;
+            rotationAnimator.OnRotationComplete -= HandleRotationComplete;
         }
         if (faceChildrenRemover != null && disableInputDuringRotation)
         {
@@ -81,7 +83,7 @@ public class RotationAnimatorInput : MonoBehaviour
         if (Keyboard.current.kKey.wasPressedThisFrame) { RegisterKey("L'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.LPrime); }
 
         if (Keyboard.current.rKey.wasPressedThisFrame) { RegisterKey("R"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.R); }
-        if (Keyboard.current.eKey.wasPressedThisFrame) { RegisterKey("R'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.RPrime); }
+        if (Keyboard.current.qKey.wasPressedThisFrame) { RegisterKey("R'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.RPrime); }
 
         if (Keyboard.current.fKey.wasPressedThisFrame) { RegisterKey("F"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.F); }
         if (Keyboard.current.gKey.wasPressedThisFrame) { RegisterKey("F'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.FPrime); }
@@ -142,10 +144,34 @@ public class RotationAnimatorInput : MonoBehaviour
         isInputEnabled = false;
     }
 
+    private void HandleRotationComplete()
+    {
+        if (!disableInputDuringRotation)
+        {
+            return;
+        }
+
+        if (faceChildrenRemover == null)
+        {
+            isInputEnabled = true;
+            return;
+        }
+
+        if (faceChildrenRemover.StartupOnlyRebuild && faceChildrenRemover.StartupBuildCompleted)
+        {
+            isInputEnabled = true;
+        }
+    }
+
     // --- ADDED ---
     // --- CHANGED ---
     private void HandlePlatformsRespawned()
     {
         isInputEnabled = true;
+    }
+
+    public void SetInputEnabled(bool enabled)
+    {
+        isInputEnabled = enabled;
     }
 }

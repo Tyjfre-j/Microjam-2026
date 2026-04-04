@@ -1,8 +1,5 @@
 using UnityEngine;
-<<<<<<< HEAD
-=======
 using UnityEngine.InputSystem;
->>>>>>> origin/dev
 using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
@@ -19,20 +16,12 @@ public class GameManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private CubeState cubeState;
     [SerializeField] private RotationAnimator rotationAnimator;
-<<<<<<< HEAD
-=======
     [SerializeField] private CubeScrambler cubeScrambler;
->>>>>>> origin/dev
     [SerializeField] private PlayerController playerController;
 
     [Header("UI")]
     [SerializeField] private GameObject winPanel;
 
-<<<<<<< HEAD
-    [Header("State")]
-    [SerializeField] private GameState currentState = GameState.Playing;
-
-=======
     [Header("Debug")]
     [SerializeField, Tooltip("Allow forcing win with a keyboard shortcut in Play Mode.")]
     private bool allowDebugWinShortcut = false;
@@ -44,7 +33,6 @@ public class GameManager : MonoBehaviour
 
     private bool winChecksEnabled;
 
->>>>>>> origin/dev
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -56,10 +44,7 @@ public class GameManager : MonoBehaviour
 
         if (cubeState == null) { cubeState = FindAnyObjectByType<CubeState>(); }
         if (rotationAnimator == null) { rotationAnimator = FindAnyObjectByType<RotationAnimator>(); }
-<<<<<<< HEAD
-=======
         if (cubeScrambler == null) { cubeScrambler = FindAnyObjectByType<CubeScrambler>(); }
->>>>>>> origin/dev
         if (playerController == null) { playerController = FindAnyObjectByType<PlayerController>(); }
     }
 
@@ -69,14 +54,11 @@ public class GameManager : MonoBehaviour
         {
             rotationAnimator.OnRotationComplete += CheckWin;
         }
-<<<<<<< HEAD
-=======
 
         if (cubeScrambler != null)
         {
             cubeScrambler.OnStartupShuffleCompleted += HandleStartupShuffleCompleted;
         }
->>>>>>> origin/dev
     }
 
     private void OnDisable()
@@ -85,14 +67,11 @@ public class GameManager : MonoBehaviour
         {
             rotationAnimator.OnRotationComplete -= CheckWin;
         }
-<<<<<<< HEAD
-=======
 
         if (cubeScrambler != null)
         {
             cubeScrambler.OnStartupShuffleCompleted -= HandleStartupShuffleCompleted;
         }
->>>>>>> origin/dev
     }
 
     private void Start()
@@ -101,8 +80,6 @@ public class GameManager : MonoBehaviour
         {
             winPanel.SetActive(false);
         }
-<<<<<<< HEAD
-=======
 
         RefreshWinCheckAvailability();
     }
@@ -120,16 +97,12 @@ public class GameManager : MonoBehaviour
         {
             ResetWinForTesting();
         }
->>>>>>> origin/dev
     }
 
     /// <summary>Check for a solved cube and trigger win state.</summary>
     public void CheckWin()
     {
-<<<<<<< HEAD
-=======
         if (!winChecksEnabled) { return; }
->>>>>>> origin/dev
         if (currentState != GameState.Playing) { return; }
         if (cubeState == null) { return; }
 
@@ -161,8 +134,6 @@ public class GameManager : MonoBehaviour
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
-<<<<<<< HEAD
-=======
 
     private void HandleStartupShuffleCompleted()
     {
@@ -217,5 +188,4 @@ public class GameManager : MonoBehaviour
         }
         playerController?.Unfreeze();
     }
->>>>>>> origin/dev
 }

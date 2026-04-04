@@ -12,6 +12,7 @@ public class PlayerController : MonoBehaviour
     [Header("Detection")]
     public LayerMask walkableLayers;
     public float groundCheckDist = 0.15f;
+    public Animator Animator; // Optional reference to animate child objects (like legs)
 
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
@@ -22,9 +23,14 @@ public class PlayerController : MonoBehaviour
     private Vector3 currentUp = Vector3.up;
     private bool isFrozen;
 
-    private void Start()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            Debug.LogError("PlayerController: Rigidbody not found on this GameObject!");
+            return;
+        }
         rb.useGravity = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
@@ -49,8 +55,9 @@ public class PlayerController : MonoBehaviour
     }
 
     private void ExecuteJump()
-    {
+    { 
         // Kill existing vertical velocity for a snappy double jump
+        SetAnimatorBool("isjumping", true);
         Vector3 localVel = transform.InverseTransformDirection(rb.linearVelocity);
         localVel.y = 0f;
         rb.linearVelocity = transform.TransformDirection(localVel);
@@ -106,9 +113,18 @@ public class PlayerController : MonoBehaviour
 
         // 4. MOVEMENT (A/D Only)
         float xInput = 0f;
-        if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) xInput = 1f;
-        if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) xInput = -1f;
-
+        bool isMoving = false;
+        if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) 
+        {
+            xInput = 1f;
+            isMoving = true;
+        }
+        if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) 
+        {
+            xInput = -1f;
+            isMoving = true;
+        }
+        SetAnimatorBool("iswalking", isMoving);
         Vector3 moveVel = transform.right * xInput * moveSpeed;
         Vector3 verticalVel = Vector3.Project(rb.linearVelocity, transform.up);
 
@@ -134,7 +150,10 @@ public class PlayerController : MonoBehaviour
     public void Freeze()
     {
         isFrozen = true;
-        rb.linearVelocity = Vector3.zero;
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+        }
     }
 
     /// <summary>Unfreeze the player after rotation.</summary>
@@ -170,6 +189,12 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    
+    private void SetAnimatorBool(string param, bool value)
+    {
+        if (Animator != null)
+        {
+            Animator.SetBool(param, value);
+        }
+    }
 
 }

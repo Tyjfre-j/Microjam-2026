@@ -134,14 +134,21 @@ public class CubeVisual : MonoBehaviour
     public void ApplyStickersFromState()
     {
         if (cubeState == null || cubeState.tiles == null || cubeState.tiles.Length != 24) return;
+<<<<<<< HEAD
+=======
         EnsureValidPiecesCache();
+>>>>>>> origin/dev
         if (pieces == null || pieces.Length == 0) return;
 
         foreach (GameObject piece in pieces)
         {
+<<<<<<< HEAD
+            CubePiece cubePiece = piece.GetComponent<CubePiece>();
+=======
             if (piece == null) continue;
             CubePiece cubePiece = piece.GetComponent<CubePiece>();
             if (cubePiece == null) continue;
+>>>>>>> origin/dev
             Vector3 local = PiecesRoot.InverseTransformPoint(piece.transform.position);
             int xSign = Sign(local.x); int ySign = Sign(local.y); int zSign = Sign(local.z);
 
@@ -164,6 +171,8 @@ public class CubeVisual : MonoBehaviour
         }
     }
 
+<<<<<<< HEAD
+=======
     public void ApplyStartupFaceMeshVisibilityByMaterial()
     {
         if (pieces == null || pieces.Length == 0)
@@ -212,6 +221,7 @@ public class CubeVisual : MonoBehaviour
         }
     }
 
+>>>>>>> origin/dev
     private void AssignAnimation(CubePiece cp, CubePiece.Face face, int faceIdx, int x, int y, int z)
     {
         int tileIdx = GetTileIndexForFace(faceIdx, x, y, z);
@@ -266,6 +276,14 @@ public class CubeVisual : MonoBehaviour
 
     private static int Sign(float value) => value >= 0f ? 1 : -1;
 
+<<<<<<< HEAD
+    public void SyncStateFromPieces()
+    {
+        if (cubeState == null || cubeState.tiles == null || cubeState.tiles.Length != 24) return;
+        foreach (GameObject piece in pieces)
+        {
+            CubePiece cubePiece = piece.GetComponent<CubePiece>();
+=======
     private static bool IsFaceName(string faceName)
     {
         return string.Equals(faceName, "front", System.StringComparison.OrdinalIgnoreCase)
@@ -287,6 +305,7 @@ public class CubeVisual : MonoBehaviour
             if (piece == null) continue;
             CubePiece cubePiece = piece.GetComponent<CubePiece>();
             if (cubePiece == null) continue;
+>>>>>>> origin/dev
             Vector3 local = PiecesRoot.InverseTransformPoint(piece.transform.position);
             int xSign = Sign(local.x); int ySign = Sign(local.y); int zSign = Sign(local.z);
 
@@ -300,6 +319,8 @@ public class CubeVisual : MonoBehaviour
             else cubeState.tiles[GetTileIndexForFace(1, xSign, ySign, zSign)] = cubePiece.GetStickerFacingWorld(-PiecesRoot.forward);
         }
     }
+<<<<<<< HEAD
+=======
 
     private void EnsureValidPiecesCache()
     {
@@ -318,4 +339,5 @@ public class CubeVisual : MonoBehaviour
             }
         }
     }
+>>>>>>> origin/dev
 }

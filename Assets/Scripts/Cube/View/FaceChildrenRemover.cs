@@ -60,10 +60,13 @@ public class FaceChildrenRemover : MonoBehaviour
 
     [Header("Behavior")]
     [SerializeField] private bool removeOnRotation = true;
+<<<<<<< HEAD
+=======
     [SerializeField, Tooltip("If enabled, platforms are rebuilt once during startup and not on every rotation.")]
     private bool startupOnlyRebuild = true;
     [SerializeField, Tooltip("Spawn platforms only on exterior faces of each cube piece.")]
     private bool respawnOnlyExteriorFaces = true;
+>>>>>>> origin/dev
     [SerializeField, Tooltip("Seconds to wait before respawning platform children after removal.")]
     private float respawnDelaySeconds = 0.05f;
     [Header("Debug")]
@@ -76,12 +79,17 @@ public class FaceChildrenRemover : MonoBehaviour
 
     private Coroutine respawnRoutine;
     private int rotationSequence;
+<<<<<<< HEAD
+    private readonly HashSet<MeshRenderer> hiddenVisibleFaceMeshes = new HashSet<MeshRenderer>();
+
+=======
     private bool startupBuildCompleted;
     private readonly HashSet<MeshRenderer> hiddenVisibleFaceMeshes = new HashSet<MeshRenderer>();
 
     public bool StartupOnlyRebuild => startupOnlyRebuild;
     public bool StartupBuildCompleted => startupBuildCompleted;
 
+>>>>>>> origin/dev
     private void Awake()
     {
         if (cubeManager == null) cubeManager = GetComponent<CubeManager>();
@@ -153,7 +161,11 @@ public class FaceChildrenRemover : MonoBehaviour
 
     private void OnEnable()
     {
+<<<<<<< HEAD
+        if (cubeManager != null && removeOnRotation)
+=======
         if (cubeManager != null && removeOnRotation && !startupOnlyRebuild)
+>>>>>>> origin/dev
         {
             cubeManager.OnRotationStart += HandleRotationStart;
             cubeManager.OnRotationComplete += HandleRotationComplete;
@@ -180,6 +192,16 @@ public class FaceChildrenRemover : MonoBehaviour
     [ContextMenu("Remove Face Children (All)")]
     public void RemoveAllFaceChildren()
     {
+<<<<<<< HEAD
+        if (cubeRoot == null)
+        {
+            Log("Cube root is not assigned.");
+            return;
+        }
+
+        int removed = RemoveFaceChildren(null);
+        Log($"Removed {removed} face children (all pieces).");
+=======
         int removed = RemoveAllForStartup();
         Log($"Removed {removed} face children (all pieces).");
     }
@@ -226,15 +248,19 @@ public class FaceChildrenRemover : MonoBehaviour
         RestoreHiddenVisibleFaceMeshes();
         OnPlatformsRespawned?.Invoke();
         return spawned;
+>>>>>>> origin/dev
     }
 
     private void HandleRotationStart(CubeManager.Axis axis, int layerIndex, bool clockwise)
     {
+<<<<<<< HEAD
+=======
         if (startupOnlyRebuild)
         {
             return;
         }
 
+>>>>>>> origin/dev
         rotationSequence++;
         if (respawnRoutine != null)
         {
@@ -251,11 +277,14 @@ public class FaceChildrenRemover : MonoBehaviour
 
     private void HandleRotationComplete(CubeManager.Axis axis, int layerIndex, bool clockwise)
     {
+<<<<<<< HEAD
+=======
         if (startupOnlyRebuild)
         {
             return;
         }
 
+>>>>>>> origin/dev
         if (respawnRoutine != null)
         {
             StopCoroutine(respawnRoutine);
@@ -426,12 +455,15 @@ public class FaceChildrenRemover : MonoBehaviour
                 if (!onlyPieces.Contains(owner)) continue;
             }
 
+<<<<<<< HEAD
+=======
             if (respawnOnlyExteriorFaces && !IsConcernedExteriorFace(owner, t.name))
             {
                 ClearChildren(t);
                 continue;
             }
 
+>>>>>>> origin/dev
             // Defensive clear: if a previous remove pass was skipped/stale, avoid duplicate platform roots.
             ClearChildren(t);
 
@@ -539,7 +571,11 @@ public class FaceChildrenRemover : MonoBehaviour
         CubePiece[] pieces = root.GetComponentsInChildren<CubePiece>(true);
         foreach (CubePiece p in pieces)
         {
+<<<<<<< HEAD
+            if (p == null) continue;
+=======
             if (!IsValidVisiblePiece(p)) continue;
+>>>>>>> origin/dev
             visiblePiecesByGrid[p.GridPosition] = p;
         }
     }
@@ -577,17 +613,24 @@ public class FaceChildrenRemover : MonoBehaviour
             return;
         }
 
+<<<<<<< HEAD
+        if (!visiblePiecesByGrid.TryGetValue(owner.GridPosition, out CubePiece visiblePiece) || visiblePiece == null)
+=======
         if (!TryGetValidVisiblePiece(owner.GridPosition, out CubePiece visiblePiece))
+>>>>>>> origin/dev
         {
             if (showMaterialMatchDebug) Debug.Log($"[FaceChildrenRemover] Match skipped: no visible piece for grid {owner.GridPosition}");
             return;
         }
 
         string faceChildName = faceTransform.name;
+<<<<<<< HEAD
+=======
         if (showMaterialMatchDebug)
         {
             Debug.Log($"[FaceChildrenRemover] Comparing requested face '{faceChildName}' on visible piece '{visiblePiece.name}'. Candidates: {GetVisibleFaceCandidatesDebug(visiblePiece.transform, faceChildName)}");
         }
+>>>>>>> origin/dev
         Transform faceChild = FindBestVisibleFaceChild(visiblePiece.transform, faceChildName);
         if (faceChild == null)
         {
@@ -768,6 +811,8 @@ public class FaceChildrenRemover : MonoBehaviour
         if (fallback != null) names.Add(fallback.name);
     }
 
+<<<<<<< HEAD
+=======
     private bool TryGetValidVisiblePiece(Vector3Int gridPosition, out CubePiece visiblePiece)
     {
         visiblePiece = null;
@@ -814,6 +859,7 @@ public class FaceChildrenRemover : MonoBehaviour
         return false;
     }
 
+>>>>>>> origin/dev
     private static string CleanMaterialName(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "";
@@ -899,6 +945,8 @@ public class FaceChildrenRemover : MonoBehaviour
         return visiblePiece.Find(requestedFaceName);
     }
 
+<<<<<<< HEAD
+=======
     private string GetVisibleFaceCandidatesDebug(Transform visiblePiece, string requestedFaceName)
     {
         if (visiblePiece == null || string.IsNullOrWhiteSpace(requestedFaceName)) return "none";
@@ -928,6 +976,7 @@ public class FaceChildrenRemover : MonoBehaviour
         return string.Join(", ", candidates);
     }
 
+>>>>>>> origin/dev
     private static Vector3 FaceNameToLocalNormal(string faceName)
     {
         if (string.Equals(faceName, "front", System.StringComparison.OrdinalIgnoreCase)) return Vector3.forward;
@@ -969,6 +1018,8 @@ public class FaceChildrenRemover : MonoBehaviour
         return result;
     }
 
+<<<<<<< HEAD
+=======
     private static bool IsConcernedExteriorFace(CubePiece owner, string faceName)
     {
         if (owner == null || string.IsNullOrWhiteSpace(faceName)) return false;
@@ -983,6 +1034,7 @@ public class FaceChildrenRemover : MonoBehaviour
         return false;
     }
 
+>>>>>>> origin/dev
 
     private bool IsFaceTransform(string name)
     {

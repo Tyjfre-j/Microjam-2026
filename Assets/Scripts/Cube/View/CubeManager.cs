@@ -97,6 +97,8 @@ public class CubeManager : MonoBehaviour
         CachePiecesFromChildren();
     }
 
+<<<<<<< HEAD
+=======
     /// <summary>
     /// Validates that the authoritative gameplay cube root has exactly 8 direct-child
     /// pieces with unique in-range grid positions.
@@ -244,6 +246,7 @@ public class CubeManager : MonoBehaviour
         return -1;
     }
 
+>>>>>>> origin/dev
     private IEnumerator RotateLayerRoutine(Axis axis, int layerIndex, bool clockwise, List<CubePiece> layerPieces, System.Action onComplete)
     {
         isRotating = true;
@@ -301,12 +304,29 @@ public class CubeManager : MonoBehaviour
         if (cubeRoot == null) cubeRoot = transform;
 
         int count = 0;
+<<<<<<< HEAD
+=======
         bool[] occupied = new bool[CubeSize * CubeSize * CubeSize];
 
+>>>>>>> origin/dev
         foreach (Transform child in cubeRoot)
         {
             CubePiece piece = child.GetComponent<CubePiece>();
             if (piece == null) continue;
+<<<<<<< HEAD
+            Vector3Int pos = piece.GridPosition;
+            if (!IsValidGridPosition(pos))
+            {
+                Log($"Piece '{piece.name}' has invalid grid position {pos}.");
+                continue;
+            }
+            if (cube[pos.x, pos.y, pos.z] != null)
+            {
+                Log($"Grid slot {pos} already occupied. Check for duplicates.");
+                continue;
+            }
+            cube[pos.x, pos.y, pos.z] = piece;
+=======
 
             Vector3Int pos = piece.GridPosition;
 
@@ -344,6 +364,7 @@ public class CubeManager : MonoBehaviour
 
             cube[pos.x, pos.y, pos.z] = piece;
             occupied[slot] = true;
+>>>>>>> origin/dev
             SnapPieceTransform(piece);
             count++;
         }
@@ -453,6 +474,8 @@ public class CubeManager : MonoBehaviour
         return new Vector3(x, y, z) + gridOriginOffset;
     }
 
+<<<<<<< HEAD
+=======
     private Vector3Int GetClosestFreeGridSlot(Vector3 pieceLocalPosition, bool[] occupied)
     {
         float bestDist = float.MaxValue;
@@ -488,6 +511,7 @@ public class CubeManager : MonoBehaviour
         return (pos.x * CubeSize * CubeSize) + (pos.y * CubeSize) + pos.z;
     }
 
+>>>>>>> origin/dev
     private Vector3 AxisToVector(Axis axis)
     {
         return axis == Axis.X ? Vector3.right : axis == Axis.Y ? Vector3.up : Vector3.forward;

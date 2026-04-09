@@ -22,6 +22,15 @@ public class PlayerController : MonoBehaviour
     private Vector3 currentUp = Vector3.up;
     private bool isFrozen;
 
+<<<<<<< HEAD
+    private void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        rb.useGravity = false;
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+=======
     private void Awake()
     {
         EnsureRigidbodySetup();
@@ -30,6 +39,7 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         EnsureRigidbodySetup();
+>>>>>>> origin/dev
 
         // Set player to Ignore Raycast layer so he doesn't hit himself
         gameObject.layer = 2;
@@ -51,8 +61,11 @@ public class PlayerController : MonoBehaviour
 
     private void ExecuteJump()
     {
+<<<<<<< HEAD
+=======
         if (!EnsureRigidbodySetup()) return;
 
+>>>>>>> origin/dev
         // Kill existing vertical velocity for a snappy double jump
         Vector3 localVel = transform.InverseTransformDirection(rb.linearVelocity);
         localVel.y = 0f;
@@ -67,8 +80,11 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+<<<<<<< HEAD
+=======
         if (!EnsureRigidbodySetup()) return;
 
+>>>>>>> origin/dev
         if (isFrozen)
         {
             rb.linearVelocity = Vector3.zero;
@@ -128,8 +144,11 @@ public class PlayerController : MonoBehaviour
     /// <summary>Enable or disable player input.</summary>
     public void SetInputEnabled(bool enabled)
     {
+<<<<<<< HEAD
+=======
         if (!EnsureRigidbodySetup()) return;
 
+>>>>>>> origin/dev
         isFrozen = !enabled;
         if (isFrozen)
         {
@@ -140,8 +159,11 @@ public class PlayerController : MonoBehaviour
     /// <summary>Freeze the player instantly (used during cube rotation).</summary>
     public void Freeze()
     {
+<<<<<<< HEAD
+=======
         if (!EnsureRigidbodySetup()) return;
 
+>>>>>>> origin/dev
         isFrozen = true;
         rb.linearVelocity = Vector3.zero;
     }
@@ -161,6 +183,28 @@ public class PlayerController : MonoBehaviour
     private void Log(string msg)
     {
         if (showDebugLogs) Debug.Log($"[{GetType().Name}] {msg}");
+<<<<<<< HEAD
+       }
+         void OnCollisionEnter(Collision collision) 
+       {
+         if(collision.gameObject.CompareTag("Hazard")) {
+        Die(); // This calls the respawn logic we already built
+        }
+    } 
+   // This detects when you enter the "Trigger" zone of an enemy
+    private void OnTriggerEnter(Collider other)
+    {
+        // Check if the thing we hit is tagged Hazard
+        if (other.CompareTag("Hazard"))
+        {
+            Debug.Log("Touched an Enemy! Dying...");
+            Die(); 
+        }
+    }
+
+    
+
+=======
     }
 
     private bool EnsureRigidbodySetup()
@@ -181,4 +225,5 @@ public class PlayerController : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         return true;
     }
+>>>>>>> origin/dev
 }

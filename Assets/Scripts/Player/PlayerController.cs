@@ -38,7 +38,6 @@ public class PlayerController : MonoBehaviour
 
         // Set player to Ignore Raycast layer so he doesn't hit himself
         gameObject.layer = 2;
-        Animator = GetComponentInChildren<Animator>();
     }
 
     private void Update()
@@ -58,7 +57,7 @@ public class PlayerController : MonoBehaviour
     private void ExecuteJump()
     { 
         // Kill existing vertical velocity for a snappy double jump
-        Animator.SetTrigger("isjumping");
+        SetAnimatorBool("isjumping", true);
         Vector3 localVel = transform.InverseTransformDirection(rb.linearVelocity);
         localVel.y = 0f;
         rb.linearVelocity = transform.TransformDirection(localVel);
@@ -125,7 +124,7 @@ public class PlayerController : MonoBehaviour
             xInput = -1f;
             isMoving = true;
         }
-        
+        SetAnimatorBool("iswalking", isMoving);
         Vector3 moveVel = transform.right * xInput * moveSpeed;
         Vector3 verticalVel = Vector3.Project(rb.linearVelocity, transform.up);
 
@@ -190,5 +189,12 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    
+    private void SetAnimatorBool(string param, bool value)
+    {
+        if (Animator != null)
+        {
+            Animator.SetBool(param, value);
+        }
+    }
+
 }

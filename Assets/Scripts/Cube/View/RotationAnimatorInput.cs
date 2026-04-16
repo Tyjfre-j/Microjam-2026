@@ -16,8 +16,6 @@ public class RotationAnimatorInput : MonoBehaviour
     [SerializeField] private bool showDebugLogs = false;
 
     private Text debugText;
-    private float lastKeyTime;
-    private string lastKeyLabel = "";
     // --- ADDED ---
     private bool isInputEnabled = true;
 
@@ -71,46 +69,17 @@ public class RotationAnimatorInput : MonoBehaviour
         if (!isInputEnabled) { return; }
         if (rotationAnimator == null || rotationAnimator.isAnimating) { return; }
 
-        if (Keyboard.current == null) { return; }
-
-        if (Keyboard.current.uKey.wasPressedThisFrame) { RegisterKey("U"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.U); }
-        if (Keyboard.current.jKey.wasPressedThisFrame) { RegisterKey("U'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.UPrime); }
-
-        if (Keyboard.current.dKey.wasPressedThisFrame) { RegisterKey("D"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.D); }
-        if (Keyboard.current.cKey.wasPressedThisFrame) { RegisterKey("D'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.DPrime); }
-
-        if (Keyboard.current.lKey.wasPressedThisFrame) { RegisterKey("L"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.L); }
-        if (Keyboard.current.kKey.wasPressedThisFrame) { RegisterKey("L'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.LPrime); }
-
-        if (Keyboard.current.rKey.wasPressedThisFrame) { RegisterKey("R"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.R); }
-        if (Keyboard.current.qKey.wasPressedThisFrame) { RegisterKey("R'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.RPrime); }
-
-        if (Keyboard.current.fKey.wasPressedThisFrame) { RegisterKey("F"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.F); }
-        if (Keyboard.current.gKey.wasPressedThisFrame) { RegisterKey("F'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.FPrime); }
-
-        if (Keyboard.current.bKey.wasPressedThisFrame) { RegisterKey("B"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.B); }
-        if (Keyboard.current.nKey.wasPressedThisFrame) { RegisterKey("B'"); rotationAnimator.AnimateAndApplyRotation(RotationAnimator.RotationType.BPrime); }
+        // Removed keyboard input handling to allow WASD for walking
+        // Cube rotation now only via buttons
 
         UpdateOverlay();
-    }
-
-    private void RegisterKey(string label)
-    {
-        lastKeyLabel = label;
-        lastKeyTime = Time.unscaledTime;
-        if (showDebugLogs)
-        {
-            // Log removed per project request.
-        }
     }
 
     private void UpdateOverlay()
     {
         if (debugText == null) { return; }
-        string status = Keyboard.current == null ? "Keyboard: NULL" : "Keyboard: OK";
-        float age = Time.unscaledTime - lastKeyTime;
-        string last = string.IsNullOrEmpty(lastKeyLabel) ? "None" : $"{lastKeyLabel} ({age:0.0}s ago)";
-        debugText.text = $"Rotation Input\n{status}\nLast Key: {last}";
+        string status = isInputEnabled ? "Input: Enabled" : "Input: Disabled";
+        debugText.text = $"Rotation Input\n{status}\nInput via Buttons Only";
     }
 
     private void CreateDebugOverlay()

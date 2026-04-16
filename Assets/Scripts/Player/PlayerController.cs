@@ -12,6 +12,7 @@ public class PlayerController : MonoBehaviour
     [Header("Detection")]
     public LayerMask walkableLayers;
     public float groundCheckDist = 0.15f;
+    public Animator Animator; // Optional reference to animate child objects (like legs)
 
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
@@ -24,12 +25,16 @@ public class PlayerController : MonoBehaviour
 
     private void Awake()
     {
-        EnsureRigidbodySetup();
-    }
-
-    private void Start()
-    {
-        EnsureRigidbodySetup();
+        rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            Debug.LogError("PlayerController: Rigidbody not found on this GameObject!");
+            return;
+        }
+        rb.useGravity = false;
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         // Set player to Ignore Raycast layer so he doesn't hit himself
         gameObject.layer = 2;
@@ -50,10 +55,9 @@ public class PlayerController : MonoBehaviour
     }
 
     private void ExecuteJump()
-    {
-        if (!EnsureRigidbodySetup()) return;
-
+    { 
         // Kill existing vertical velocity for a snappy double jump
+        SetAnimatorBool("isjumping", true);
         Vector3 localVel = transform.InverseTransformDirection(rb.linearVelocity);
         localVel.y = 0f;
         rb.linearVelocity = transform.TransformDirection(localVel);
@@ -67,8 +71,6 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (!EnsureRigidbodySetup()) return;
-
         if (isFrozen)
         {
             rb.linearVelocity = Vector3.zero;
@@ -111,9 +113,18 @@ public class PlayerController : MonoBehaviour
 
         // 4. MOVEMENT (A/D Only)
         float xInput = 0f;
-        if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) xInput = 1f;
-        if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) xInput = -1f;
-
+        bool isMoving = false;
+        if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) 
+        {
+            xInput = 1f;
+            isMoving = true;
+        }
+        if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) 
+        {
+            xInput = -1f;
+            isMoving = true;
+        }
+        SetAnimatorBool("iswalking", isMoving);
         Vector3 moveVel = transform.right * xInput * moveSpeed;
         Vector3 verticalVel = Vector3.Project(rb.linearVelocity, transform.up);
 
@@ -128,8 +139,6 @@ public class PlayerController : MonoBehaviour
     /// <summary>Enable or disable player input.</summary>
     public void SetInputEnabled(bool enabled)
     {
-        if (!EnsureRigidbodySetup()) return;
-
         isFrozen = !enabled;
         if (isFrozen)
         {
@@ -140,10 +149,11 @@ public class PlayerController : MonoBehaviour
     /// <summary>Freeze the player instantly (used during cube rotation).</summary>
     public void Freeze()
     {
-        if (!EnsureRigidbodySetup()) return;
-
         isFrozen = true;
-        rb.linearVelocity = Vector3.zero;
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+        }
     }
 
     /// <summary>Unfreeze the player after rotation.</summary>
@@ -161,24 +171,30 @@ public class PlayerController : MonoBehaviour
     private void Log(string msg)
     {
         if (showDebugLogs) Debug.Log($"[{GetType().Name}] {msg}");
-    }
-
-    private bool EnsureRigidbodySetup()
+       }
+         void OnCollisionEnter(Collision collision) 
+       {
+         if(collision.gameObject.CompareTag("Hazard")) {
+        Die(); // This calls the respawn logic we already built
+        }
+    } 
+   // This detects when you enter the "Trigger" zone of an enemy
+    private void OnTriggerEnter(Collider other)
     {
-        if (rb == null)
+        // Check if the thing we hit is tagged Hazard
+        if (other.CompareTag("Hazard"))
         {
-            rb = GetComponent<Rigidbody>();
+            Debug.Log("Touched an Enemy! Dying...");
+            Die(); 
         }
-
-        if (rb == null)
-        {
-            return false;
-        }
-
-        rb.useGravity = false;
-        rb.constraints = RigidbodyConstraints.FreezeRotation;
-        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
-        return true;
     }
+
+    private void SetAnimatorBool(string param, bool value)
+    {
+        if (Animator != null)
+        {
+            Animator.SetBool(param, value);
+        }
+    }
+
 }

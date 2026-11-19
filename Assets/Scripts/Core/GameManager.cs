@@ -21,6 +21,24 @@ public class GameManager : MonoBehaviour
 
     [Header("UI")]
     [SerializeField] private GameObject winPanel;
+    [SerializeField, Tooltip("Scene loaded after winning (used when no win panel is assigned).")]
+    private string winSceneName = "Win";
+    [SerializeField] private float winSceneDelay = 1.5f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Bootstrap()
+    {
+        SceneManager.sceneLoaded += (s, m) => EnsureInstance();
+        EnsureInstance();
+    }
+
+    // The gameplay scene has a cube but no GameManager; create one so winning works.
+    private static void EnsureInstance()
+    {
+        if (FindAnyObjectByType<GameManager>() != null) return;
+        if (FindAnyObjectByType<CubeState>() == null) return;
+        new GameObject("GameManager (auto)").AddComponent<GameManager>();
+    }
 
     [Header("Debug")]
     [SerializeField, Tooltip("Allow forcing win with a keyboard shortcut in Play Mode.")]
@@ -126,7 +144,16 @@ public class GameManager : MonoBehaviour
             {
                 winPanel.SetActive(true);
             }
+            else if (!string.IsNullOrEmpty(winSceneName))
+            {
+                Invoke(nameof(LoadWinScene), winSceneDelay);
+            }
         }
+    }
+
+    private void LoadWinScene()
+    {
+        SceneManager.LoadScene(winSceneName);
     }
 
     /// <summary>Restart the current scene.</summary>

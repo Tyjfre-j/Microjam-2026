@@ -65,7 +65,9 @@ public class FaceChildrenRemover : MonoBehaviour
     [SerializeField, Tooltip("Spawn platforms only on exterior faces of each cube piece.")]
     private bool respawnOnlyExteriorFaces = true;
     [SerializeField, Tooltip("Seconds to wait before respawning platform children after removal.")]
-    private float respawnDelaySeconds = 0.05f;
+    private float respawnDelaySeconds = 0f;
+    [SerializeField, Tooltip("Keep platforms on the turning slice (they rotate with it) and swap them the frame the turn ends.")]
+    private bool keepPlatformsDuringRotation = false;
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
     [SerializeField] private bool showTemplatePickDebug = false;
@@ -243,6 +245,12 @@ public class FaceChildrenRemover : MonoBehaviour
         }
 
         playerController?.Freeze();
+        if (keepPlatformsDuringRotation)
+        {
+            // Platforms are children of the rotating pieces, so they turn with the slice.
+            // They get swapped for the new face templates in the same frame the turn ends — no bare/empty gap.
+            return;
+        }
         HashSet<CubePiece> affected = CollectPiecesInLayer(axis, layerIndex);
         ShowVisibleFaceMeshesForLayer(affected);
         int removed = RemoveFaceChildren(affected);
@@ -269,6 +277,21 @@ public class FaceChildrenRemover : MonoBehaviour
         if (respawnDelaySeconds > 0f)
         {
             yield return new WaitForSeconds(respawnDelaySeconds);
+        }
+        else if (keepPlatformsDuringRotation && sequence == rotationSequence)
+        {
+            // Wait one frame so rotation + state sync are applied; old platforms stay visible meanwhile.
+            yield return null;
+            if (sequence != rotationSequence) yield break;
+            CacheVisiblePieces();
+            HashSet<CubePiece> now = CollectPiecesInLayer(axis, layerIndex);
+            int n = RespawnPlatforms(now);
+            HideVisibleFaceMeshesForLayer(now);
+            Log($"Respawned {n} platform groups for rotated layer.");
+            respawnRoutine = null;
+            OnPlatformsRespawned?.Invoke();
+            playerController?.Unfreeze();
+            yield break;
         }
 
         // Ensure rotation + state sync have fully applied before sampling materials.

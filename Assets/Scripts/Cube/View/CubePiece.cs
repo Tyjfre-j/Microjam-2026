@@ -41,6 +41,10 @@ public class CubePiece : MonoBehaviour
     // Inside CubePiece.cs
     public void SetSticker(Face face, CubeState.TileColor color, Sprite[] animationSheet, int quadrantID)
     {
+        // Record the logical color: win detection (SyncStateFromPieces -> GetSticker) reads this.
+        // Without it every lookup defaulted to Red and the cube always looked "solved".
+        stickers[face] = color;
+
         // Find the child object for the face (e.g. Face_+Z)
         Transform t = transform.Find("Face_" + face.ToString().Replace("Pos", "+").Replace("Neg", "-"));
         if (t != null)

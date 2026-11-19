@@ -44,6 +44,7 @@ public class CubeRotationButtonSystem : MonoBehaviour
 
     [Header("Labels")]
     [SerializeField] private bool showLabels = true;
+    [SerializeField] private bool useNeonVisuals = true;
     [SerializeField] private float labelFontSize = 32f;
     [SerializeField] private Color labelColor = Color.white;
     [SerializeField] private Vector3 labelLocalOffset = new Vector3(0f, 0.04f, 0f);
@@ -72,6 +73,7 @@ public class CubeRotationButtonSystem : MonoBehaviour
     private int lastTriggerFrame = -1;
     private string debugLine = "";
     private int lastDebugFaceIndex = -999;
+    private int lastLineFaceIndex = -999;
     private Vector3 lastDebugForwardLocal = Vector3.zero;
     private float lastDebugDot = 0f;
     private readonly HashSet<int> warnedMissingAnchorFaces = new HashSet<int>();
@@ -127,20 +129,20 @@ public class CubeRotationButtonSystem : MonoBehaviour
         if (lockDuringRotation && rotationAnimator.isAnimating)
         {
             SetButtonsActive(false);
-            debugLine = "Face: (rotating)";
+            debugLine = "Face: (rotating)"; lastLineFaceIndex = -999;
             return;
         }
         if (isLocked)
         {
             SetButtonsActive(false);
-            debugLine = "Face: (locked)";
+            debugLine = "Face: (locked)"; lastLineFaceIndex = -999;
             return;
         }
 
         if (!TryGetOrientation(out OrientationCache orientation))
         {
             SetButtonsActive(false);
-            debugLine = "Face: NONE";
+            debugLine = "Face: NONE"; lastLineFaceIndex = -999;
             return;
         }
 
@@ -160,7 +162,12 @@ public class CubeRotationButtonSystem : MonoBehaviour
         }
 
         SetButtonsActive(true);
-        debugLine = $"Face: {GetFaceName(orientation.faceIndex)}";
+        // Only allocate the debug string when the face actually changes (avoids per-frame GC).
+        if (showOnScreenDebug && orientation.faceIndex != lastLineFaceIndex)
+        {
+            lastLineFaceIndex = orientation.faceIndex;
+            debugLine = $"Face: {GetFaceName(orientation.faceIndex)}";
+        }
     }
 
     // ── Public API ────────────────────────────────────────────────
@@ -401,13 +408,14 @@ public class CubeRotationButtonSystem : MonoBehaviour
             Transform anchorB;
             PickTwoAnchors(cornerAnchors[i], out anchorA, out anchorB);
 
-            Vector3 worldPosA = anchorA.position + Vector3.up * buttonSurfaceOffset;
-            Vector3 worldPosB = anchorB.position + Vector3.up * buttonSurfaceOffset;
+            Vector3 faceUpWorld = cubeRoot.TransformDirection(orientation.upLocal).normalized;
+            Vector3 worldPosA = anchorA.position + faceUpWorld * buttonSurfaceOffset;
+            Vector3 worldPosB = anchorB.position + faceUpWorld * buttonSurfaceOffset;
             Vector3 localPosA = cubeRoot.InverseTransformPoint(worldPosA);
             Vector3 localPosB = cubeRoot.InverseTransformPoint(worldPosB);
 
-            ConfigureButton(i * 2,     localPosA, actionA, GetLabel(actionA));
-            ConfigureButton(i * 2 + 1, localPosB, actionB, GetLabel(actionB));
+            ConfigureButton(i * 2,     localPosA, actionA, GetLabel(actionA), orientation);
+            ConfigureButton(i * 2 + 1, localPosB, actionB, GetLabel(actionB), orientation);
         }
 
         warnedMissingAnchorFaces.Remove(orientation.faceIndex);
@@ -508,7 +516,7 @@ public class CubeRotationButtonSystem : MonoBehaviour
     }
 
     // ── Button Config ─────────────────────────────────────────────
-    private void ConfigureButton(int index, Vector3 localPos, ButtonAction action, string label)
+    private void ConfigureButton(int index, Vector3 localPos, ButtonAction action, string label, OrientationCache orientation)
     {
         GameObject button = GetOrCreateButton(index);
         button.transform.SetParent(buttonsRoot, false);
@@ -522,8 +530,53 @@ public class CubeRotationButtonSystem : MonoBehaviour
 
         trigger.SetAction(action);
 
-        if (showLabels)
+        if (useNeonVisuals)
+        {
+            Transform oldLabel = button.transform.Find("Label");
+            if (oldLabel != null) oldLabel.gameObject.SetActive(false);
+
+            RotationButtonVisual visual = button.GetComponent<RotationButtonVisual>();
+            if (visual == null) visual = button.AddComponent<RotationButtonVisual>();
+
+            Vector3 rightW  = cubeRoot.TransformDirection(orientation.rightLocal).normalized;
+            Vector3 upW     = cubeRoot.TransformDirection(orientation.upLocal).normalized;
+            Vector3 normalW = cubeRoot.TransformDirection(orientation.forwardLocal).normalized;
+            visual.Setup(buttonsRoot, GetActionDirection(action, rightW, upW), normalW, GetActionColor(action));
+        }
+        else if (showLabels)
+        {
             SetLabel(button.transform, label);
+        }
+    }
+
+    // Direction (on the visible face) the selected slice moves — the arrow points this way.
+    private static Vector3 GetActionDirection(ButtonAction action, Vector3 rightW, Vector3 upW)
+    {
+        switch (action)
+        {
+            case ButtonAction.RightColumnUp:
+            case ButtonAction.LeftColumnUp:     return upW;
+            case ButtonAction.RightColumnDown:
+            case ButtonAction.LeftColumnDown:   return -upW;
+            case ButtonAction.BottomLineLeft:
+            case ButtonAction.TopLineLeft:      return -rightW;
+            default:                            return rightW;
+        }
+    }
+
+    // Columns = cyan, rows = magenta: readable at a glance which axis a button turns.
+    private static Color GetActionColor(ButtonAction action)
+    {
+        switch (action)
+        {
+            case ButtonAction.RightColumnUp:
+            case ButtonAction.LeftColumnUp:
+            case ButtonAction.RightColumnDown:
+            case ButtonAction.LeftColumnDown:
+                return new Color(0.15f, 1.5f, 2.2f, 1f);
+            default:
+                return new Color(2.0f, 0.3f, 1.6f, 1f);
+        }
     }
 
     private GameObject GetOrCreateButton(int index)
